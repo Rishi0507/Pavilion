@@ -1,0 +1,26 @@
+# Raw Cricsheet downloads. Fetched with `make data`, never committed:
+# large, redistributable only with attribution, and reproducible.
+/data/raw/
+
+# Generated corpus. A build artifact of `make etl`.
+/data/out/*.bin
+
+# Trained model artifacts.
+/data/models/
+
+# Go build output.
+/bin/
+*.exe
+*.test
+*.out
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+ml/.venv/
+
+# Editor and OS
+.DS_Store
+.idea/
+.vscode/
