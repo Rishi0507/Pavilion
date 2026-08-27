@@ -66,6 +66,23 @@ type Quality struct {
 		NonStandardOverCount int      `json:"innings_over_20_overs"`
 	} `json:"integrity"`
 
+	// Eligible describes the player set the game can actually deal, and how
+	// much of it has resolved attributes. Attribute coverage is measured
+	// against this set rather than the whole corpus: a net bowler with forty
+	// deliveries will never be picked, so his missing bowling type is not a
+	// defect.
+	Eligible struct {
+		Players           int `json:"players"`
+		Bowlers           int `json:"bowlers"`
+		MinBallsBowled    int `json:"min_balls_bowled"`
+		MinBallsFaced     int `json:"min_balls_faced"`
+		BattingHandKnown  int `json:"batting_hand_known"`
+		BowlingClassKnown int `json:"bowling_class_known"`
+		Sourced           int `json:"attr_rows_sourced"`
+		Manual            int `json:"attr_rows_manual"`
+		InferredInTable   int `json:"attr_rows_inferred"`
+	} `json:"eligible"`
+
 	// Coverage is the percentage of records carrying each attribute. The two
 	// entries that matter most are the ones Cricsheet does not supply at all.
 	Coverage map[string]float64 `json:"coverage_pct"`
@@ -141,6 +158,24 @@ func (q *Quality) WriteMarkdown(path string) error {
 	for _, k := range keys {
 		p("| %s | %.2f%% |", k, q.Coverage[k])
 	}
+	p("")
+
+	p("## Player attributes")
+	p("")
+	p("Cricsheet carries neither batting handedness nor bowling type. Both are")
+	p("sourced separately by `parattr` into a checked-in table with per-row")
+	p("provenance. Coverage below is measured against the players the game can")
+	p("actually deal, not the whole corpus.")
+	p("")
+	p("| | |")
+	p("|---|---:|")
+	p("| Eligible players (>= %d balls faced, or >= %d bowled) | %d |",
+		q.Eligible.MinBallsFaced, q.Eligible.MinBallsBowled, q.Eligible.Players)
+	p("| Eligible bowlers | %d |", q.Eligible.Bowlers)
+	p("| Batting handedness known | %d |", q.Eligible.BattingHandKnown)
+	p("| Bowling class known | %d |", q.Eligible.BowlingClassKnown)
+	p("| Attribute rows sourced | %d |", q.Eligible.Sourced)
+	p("| Attribute rows set by hand | %d |", q.Eligible.Manual)
 	p("")
 
 	p("## Entity resolution")

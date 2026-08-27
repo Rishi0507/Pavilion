@@ -1,6 +1,6 @@
 # Manhattan data quality report
 
-Generated 2026-08-27T14:01:21Z from `data\raw\ipl_json`.
+Generated 2026-08-27T14:57:12Z from `data\raw\ipl_json`.
 Source licence: Open Data Commons Attribution License 1.0 (http://opendatacommons.org/licenses/by/1.0/), Cricsheet, by Stephen Rushe
 
 ## Corpus
@@ -27,9 +27,25 @@ Source licence: Open Data Commons Attribution License 1.0 (http://opendatacommon
 | match.result_winner | 98.46% |
 | match.toss_winner | 100.00% |
 | match.venue | 100.00% |
-| player.batting_hand | 0.00% |
-| player.bowling_type | 0.00% |
+| player.batting_hand | 97.93% |
+| player.bowling_class | 95.13% |
 | player.cricinfo_id | 100.00% |
+
+## Player attributes
+
+Cricsheet carries neither batting handedness nor bowling type. Both are
+sourced separately by `parattr` into a checked-in table with per-row
+provenance. Coverage below is measured against the players the game can
+actually deal, not the whole corpus.
+
+| | |
+|---|---:|
+| Eligible players (>= 200 balls faced, or >= 120 bowled) | 483 |
+| Eligible bowlers | 349 |
+| Batting handedness known | 473 |
+| Bowling class known | 332 |
+| Attribute rows sourced | 473 |
+| Attribute rows set by hand | 0 |
 
 ## Entity resolution
 
@@ -83,9 +99,10 @@ Miscounted overs (an umpire signalled five or seven balls; the
 - 501202.json innings 0 over 5: 5 legal balls
 - 501255.json innings 1 over 9: 5 legal balls
 
-## Warnings (1)
+## Warnings (2)
 
-- batting handedness and bowling type are absent from Cricsheet and are not yet sourced; the matchup model cannot be trained until they are
+- 10 of 483 eligible players have no batting handedness
+- 17 of 349 eligible bowlers have no bowling class
 
 ## Skipped matches (6)
 

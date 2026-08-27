@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"manhattan/internal/attr"
 	"manhattan/internal/corpus"
 )
 
@@ -33,6 +34,9 @@ type builder struct {
 	// From the people register.
 	cricinfoID map[string]string
 	registerNm map[string]string
+
+	// The attribute table, when one has been built. Nil until parattr has run.
+	attrs attr.Table
 }
 
 func newBuilder() *builder {
@@ -562,13 +566,7 @@ func (b *builder) finish(dir string, files int) {
 	}
 	b.q.Coverage["player.cricinfo_id"] = b.q.Entity.CricinfoIDCoverage
 
-	// The two attributes the matchup model depends on and Cricsheet does not
-	// supply. Tracked from day one so the gap stays visible rather than being
-	// discovered halfway through training.
-	b.q.Coverage["player.batting_hand"] = 0
-	b.q.Coverage["player.bowling_type"] = 0
-	b.q.warn("batting handedness and bowling type are absent from Cricsheet and " +
-		"are not yet sourced; the matchup model cannot be trained until they are")
+	b.attributeCoverage()
 
 	if b.q.Integrity.BallIndexMismatches > 0 {
 		b.q.warn("%d deliveries where the computed legal-ball index disagrees with actual_delivery",
@@ -580,4 +578,69 @@ func (b *builder) finish(dir string, files int) {
 	}
 	sort.Strings(b.q.Integrity.MiscountedOvers)
 	sort.Strings(b.q.Matches.Skipped)
+}
+
+// attributeCoverage measures the two attributes Cricsheet does not carry.
+//
+// Coverage is deliberately measured against the eligible player set rather than
+// every player in the corpus. A 2009 net bowler with forty deliveries will
+// never be dealt, so his missing bowling type is not a defect; a missing type
+// for a bowler the game can actually pick is.
+func (b *builder) attributeCoverage() {
+	eligible, bowlers, _ := b.st.Eligible(corpus.DefaultEligibility)
+	b.q.Eligible.Players = len(eligible)
+	b.q.Eligible.Bowlers = len(bowlers)
+	b.q.Eligible.MinBallsBowled = corpus.DefaultEligibility.MinBallsBowled
+	b.q.Eligible.MinBallsFaced = corpus.DefaultEligibility.MinBallsFaced
+
+	if b.attrs == nil {
+		b.q.Coverage["player.batting_hand"] = 0
+		b.q.Coverage["player.bowling_class"] = 0
+		b.q.warn("no attribute table found; run parattr. Batting handedness and " +
+			"bowling type are absent from Cricsheet, and the matchup model " +
+			"cannot be trained without them")
+		return
+	}
+
+	var hands, classes int
+	for _, p := range eligible {
+		if _, ok := b.attrs.BatOf(b.st.Players[p].CricsheetID); ok {
+			hands++
+		}
+	}
+	for _, p := range bowlers {
+		if _, ok := b.attrs.BowlOf(b.st.Players[p].CricsheetID); ok {
+			classes++
+		}
+	}
+	b.q.Eligible.BattingHandKnown = hands
+	b.q.Eligible.BowlingClassKnown = classes
+
+	if len(eligible) > 0 {
+		b.q.Coverage["player.batting_hand"] = 100 * float64(hands) / float64(len(eligible))
+	}
+	if len(bowlers) > 0 {
+		b.q.Coverage["player.bowling_class"] = 100 * float64(classes) / float64(len(bowlers))
+	}
+
+	for _, p := range b.attrs.All() {
+		switch p.Provenance {
+		case attr.Sourced:
+			b.q.Eligible.Sourced++
+		case attr.Manual:
+			b.q.Eligible.Manual++
+		case attr.Inferred:
+			b.q.Eligible.InferredInTable++
+		}
+	}
+	if b.q.Eligible.InferredInTable > 0 {
+		b.q.warn("%d rows in the attribute table are marked inferred; inferred values "+
+			"belong in the review file, not the main table", b.q.Eligible.InferredInTable)
+	}
+	if miss := len(eligible) - hands; miss > 0 {
+		b.q.warn("%d of %d eligible players have no batting handedness", miss, len(eligible))
+	}
+	if miss := len(bowlers) - classes; miss > 0 {
+		b.q.warn("%d of %d eligible bowlers have no bowling class", miss, len(bowlers))
+	}
 }

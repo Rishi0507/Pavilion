@@ -1,0 +1,21 @@
+{
+  "coverage_pct": {
+    "delivery.batter_resolved": 100,
+    "delivery.bowler_resolved": 100,
+    "match.city": 95.87712206952304,
+    "match.result_winner": 98.464025869038,
+    "match.toss_winner": 100,
+    "match.venue": 100,
+    "player.batting_hand": 97.9296066252588,
+    "player.bowling_class": 95.12893982808023,
+    "player.cricinfo_id": 100
+  },
+  "deliveries": 295215,
+  "matches": 1237,
+  "players": 964,
+  "integrity": {
+    "ball_index_mismatches": 0,
+    "runs_total_mismatches": 0,
+    "unregistered_names": 0
+  }
+}

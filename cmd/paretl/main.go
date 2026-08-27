@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"manhattan/internal/attr"
 	"manhattan/internal/corpus"
 )
 
@@ -28,6 +29,10 @@ func main() {
 		matchDir = flag.String("matches", filepath.Join("data", "raw", "ipl_json"), "directory of Cricsheet match JSON files")
 		register = flag.String("register", filepath.Join("data", "raw", "people.csv"), "Cricsheet people register CSV")
 		outDir   = flag.String("out", filepath.Join("data", "out"), "output directory")
+		attrPath = flag.String("attributes", filepath.Join("data", "attributes", "players.csv"), "player attribute table")
+		baseline = flag.String("baseline", filepath.Join("data", "quality_baseline.json"), "committed quality baseline")
+		check    = flag.Bool("check", false, "fail if the report regresses against the baseline")
+		writeBl  = flag.Bool("write-baseline", false, "accept the current report as the new baseline")
 		verbose  = flag.Bool("v", false, "verbose logging")
 	)
 	flag.Parse()
@@ -38,14 +43,29 @@ func main() {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 
-	if err := run(log, *matchDir, *register, *outDir); err != nil {
+	opts := options{
+		matchDir: *matchDir,
+		register: *register,
+		outDir:   *outDir,
+		attrPath: *attrPath,
+		baseline: *baseline,
+		check:    *check,
+		writeBl:  *writeBl,
+	}
+	if err := run(log, opts); err != nil {
 		log.Error("etl failed", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(log *slog.Logger, matchDir, register, outDir string) error {
+type options struct {
+	matchDir, register, outDir, attrPath, baseline string
+	check, writeBl                                 bool
+}
+
+func run(log *slog.Logger, opt options) error {
 	started := time.Now()
+	matchDir, register, outDir := opt.matchDir, opt.register, opt.outDir
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
@@ -57,6 +77,16 @@ func run(log *slog.Logger, matchDir, register, outDir string) error {
 
 	if err := b.loadRegister(register); err != nil {
 		return err
+	}
+	attrs, err := attr.Load(opt.attrPath)
+	if err != nil {
+		return err
+	}
+	if len(attrs) > 0 {
+		b.attrs = attrs
+		log.Info("attribute table loaded", "rows", len(attrs), "path", opt.attrPath)
+	} else {
+		log.Warn("no attribute table; run parattr", "path", opt.attrPath)
 	}
 	log.Info("people register loaded", "rows", b.q.Entity.RegisterRows)
 
@@ -120,6 +150,19 @@ func run(log *slog.Logger, matchDir, register, outDir string) error {
 
 	for _, w := range b.q.Warnings {
 		log.Warn(w)
+	}
+
+	if opt.writeBl {
+		if err := WriteBaseline(&b.q, opt.baseline); err != nil {
+			return err
+		}
+		log.Info("baseline updated", "path", opt.baseline)
+	}
+	if opt.check {
+		if err := CheckAgainst(&b.q, opt.baseline); err != nil {
+			return err
+		}
+		log.Info("quality gate passed", "baseline", opt.baseline)
 	}
 	return nil
 }

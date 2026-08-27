@@ -8,9 +8,9 @@ RAW     := data/raw
 OUT     := data/out
 MATCHES := $(RAW)/ipl_json
 
-.PHONY: all data etl test lint clean
+.PHONY: all data etl attrs check test lint clean
 
-all: etl test
+all: etl attrs test
 
 ## data: download the Cricsheet IPL archive and the people register
 data:
@@ -25,6 +25,18 @@ etl: $(OUT)/corpus.bin
 
 $(OUT)/corpus.bin: $(wildcard $(MATCHES)/*.json) $(RAW)/people.csv $(wildcard cmd/paretl/*.go) $(wildcard internal/corpus/*.go)
 	$(GO) run ./cmd/paretl -matches $(MATCHES) -register $(RAW)/people.csv -out $(OUT)
+
+## attrs: resolve batting handedness and bowling type for the eligible players
+attrs: $(OUT)/corpus.bin
+	$(GO) run ./cmd/parattr
+
+## check: rebuild the report and fail on any data quality regression
+check:
+	$(GO) run ./cmd/paretl -check
+
+## baseline: accept the current report as the new quality baseline
+baseline:
+	$(GO) run ./cmd/paretl -write-baseline
 
 ## test: run the full test suite
 test:

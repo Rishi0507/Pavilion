@@ -17,6 +17,8 @@ the per-over bar chart that gives the game its visual language.
 ```sh
 make data    # download the Cricsheet IPL archive and people register
 make etl     # build the binary corpus and the data quality report
+make attrs   # resolve batting handedness and bowling type
+make check   # fail if data quality has regressed
 make test    # run the test suite
 ```
 
@@ -36,8 +38,26 @@ go test ./...
 | `quality.json` | the data quality report, machine-readable, diffed in CI |
 | `quality.md` | the same report, for humans |
 
-`corpus.bin` is a build artifact and is not committed. The quality reports are
-committed, so that a regression in data coverage shows up as a diff.
+`make attrs` writes into `data/attributes/`:
+
+| File | |
+|---|---|
+| `players.csv` | the attribute table, keyed by Cricsheet id, committed |
+| `manual.csv` | hand-authored corrections; always wins over sourced values |
+| `review_inferred.csv` | unresolved players with a guess and its evidence, for a human |
+| `coverage.json` | per-attribute coverage |
+
+`corpus.bin` and the HTTP cache are build artifacts and are not committed. The
+quality reports and the attribute table are committed, so that a regression in
+coverage shows up as a diff.
+
+### The quality gate
+
+`make check` rebuilds the report and compares it to `data/quality_baseline.json`,
+failing on any regression: attribute coverage falling, the corpus shrinking, or
+a new integrity failure. It compares substantive fields only, because the report
+carries a generation timestamp and would otherwise differ on every run. An
+intended change is accepted deliberately with `make baseline`.
 
 ---
 
@@ -49,10 +69,12 @@ Stephen Rushe.
 **Licence: Open Data Commons Attribution License 1.0 (ODC-BY 1.0).**
 <http://opendatacommons.org/licenses/by/1.0/>
 
-This was verified directly against <https://cricsheet.org/register/>, which is
-the only page on the site that states the licence explicitly. It is worth
-re-checking before any public launch, because the answer matters and the site
-does not repeat it on the downloads page.
+**This needs a human re-check before launch.** The ODC-BY 1.0 statement appears
+on <https://cricsheet.org/register/> and *only* there. It is absent from the
+downloads page, absent from the JSON format documentation, and absent from the
+site homepage; all three were checked. A licence that is stated in exactly one
+non-obvious place is a licence worth confirming with the maintainer directly
+before anything ships publicly.
 
 The practical consequence is better than expected. ODC-BY is an
 **attribution-only** licence, not a share-alike one: derived databases and
@@ -131,6 +153,8 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 
 1. **ETL** — Cricsheet to binary corpus, data quality report, entity resolution ✅
 2. Corpus and CSR matchup graph, sub-10ms aggregation
+   - player attributes sourced, quality gate wired ✅
+   - CSR matchup graph and the query CLI — in progress
 3. Hierarchical shrinkage on player rates
 4. Ball outcome model, calibrated
 5. The simulator: deterministic, pure, tested
@@ -165,7 +189,6 @@ The full report is in [`data/out/quality.md`](data/out/quality.md).
   `2007/08` and IPL 2020 as `2020/21`. The edition year is taken from the match
   date instead; taking the later half of the label would misdate IPL 2020 and
   shift any held-out-season split by a year.
-- **The known gap is real.** Cricsheet carries no batting handedness and no
-  bowling type. Both are tracked at 0% coverage in the report so the gap stays
-  visible. The matchup model cannot be trained until they are sourced, via the
-  Cricinfo ids the register provides.
+- **The known gap is now closed.** Batting handedness and bowling type are
+  sourced for the 483 eligible players: **97.9% batting hand, 95.1% bowling
+  class**, in 12 HTTP requests, with 17 bowlers left for human review.

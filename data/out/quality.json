@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T14:01:21Z",
+  "generated_at": "2026-08-27T14:57:12Z",
   "source": {
     "dir": "data\\raw\\ipl_json",
     "files": 1243,
@@ -118,6 +118,17 @@
     "innings_with_target": 1237,
     "innings_over_20_overs": 0
   },
+  "eligible": {
+    "players": 483,
+    "bowlers": 349,
+    "min_balls_bowled": 120,
+    "min_balls_faced": 200,
+    "batting_hand_known": 473,
+    "bowling_class_known": 332,
+    "attr_rows_sourced": 473,
+    "attr_rows_manual": 0,
+    "attr_rows_inferred": 0
+  },
   "coverage_pct": {
     "delivery.batter_resolved": 100,
     "delivery.bowler_resolved": 100,
@@ -125,11 +136,12 @@
     "match.result_winner": 98.464025869038,
     "match.toss_winner": 100,
     "match.venue": 100,
-    "player.batting_hand": 0,
-    "player.bowling_type": 0,
+    "player.batting_hand": 97.9296066252588,
+    "player.bowling_class": 95.12893982808023,
     "player.cricinfo_id": 100
   },
   "warnings": [
-    "batting handedness and bowling type are absent from Cricsheet and are not yet sourced; the matchup model cannot be trained until they are"
+    "10 of 483 eligible players have no batting handedness",
+    "17 of 349 eligible bowlers have no bowling class"
   ]
 }
