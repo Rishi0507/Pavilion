@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-08-27T14:01:21Z",
+  "source": {
+    "dir": "data\\raw\\ipl_json",
+    "files": 1243,
+    "parsed": 1243,
+    "data_versions": {
+      "1.2.0": 1243
+    },
+    "license": "Open Data Commons Attribution License 1.0 (http://opendatacommons.org/licenses/by/1.0/), Cricsheet, by Stephen Rushe"
+  },
+  "matches": {
+    "included": 1237,
+    "skipped": [
+      "1359519.json: 1 innings (no result)",
+      "1473492.json: 1 innings (no result)",
+      "1473495.json: 1 innings (no result)",
+      "1527685.json: 1 innings (no result)",
+      "501265.json: 1 innings (no result)",
+      "829763.json: 1 innings (no result)"
+    ],
+    "by_season": {
+      "2008": 58,
+      "2009": 57,
+      "2010": 60,
+      "2011": 72,
+      "2012": 74,
+      "2013": 76,
+      "2014": 60,
+      "2015": 58,
+      "2016": 60,
+      "2017": 59,
+      "2018": 60,
+      "2019": 60,
+      "2020": 60,
+      "2021": 60,
+      "2022": 74,
+      "2023": 73,
+      "2024": 71,
+      "2025": 72,
+      "2026": 73
+    },
+    "venues": 60,
+    "cities": 38,
+    "teams": 19
+  },
+  "deliveries": {
+    "total": 295215,
+    "legal": 284130,
+    "wides": 11778,
+    "noballs": 1257,
+    "byes": 1384,
+    "legbyes": 5746,
+    "penalty": 10,
+    "wickets": 14678,
+    "by_phase": {
+      "death": 67079,
+      "middle": 135439,
+      "powerplay": 92697
+    }
+  },
+  "entity": {
+    "register_rows": 18468,
+    "players": 964,
+    "ambiguous_names": [
+      {
+        "name": "Harmeet Singh",
+        "ids": [
+          "0bf15e52",
+          "2a72fd4f"
+        ]
+      }
+    ],
+    "multi_alias_ids": [
+      {
+        "id": "12314277",
+        "names": [
+          "Arshad Khan",
+          "Arshad Khan (2)"
+        ]
+      },
+      {
+        "id": "21d4e29b",
+        "names": [
+          "NA Saini",
+          "Navdeep Saini"
+        ]
+      },
+      {
+        "id": "d7423da1",
+        "names": [
+          "S Arora",
+          "Salil Arora"
+        ]
+      }
+    ],
+    "unregistered_names": {},
+    "missing_from_register": null,
+    "cricinfo_id_coverage_pct": 100
+  },
+  "integrity": {
+    "ball_index_mismatches": 0,
+    "ball_index_samples": null,
+    "miscounted_overs": [
+      "1136564.json innings 1 over 11: 7 legal balls",
+      "335987.json innings 0 over 7: 5 legal balls",
+      "335994.json innings 1 over 10: 7 legal balls",
+      "336015.json innings 1 over 14: 5 legal balls",
+      "392198.json innings 1 over 10: 7 legal balls",
+      "419155.json innings 0 over 18: 7 legal balls",
+      "501202.json innings 0 over 5: 5 legal balls",
+      "501255.json innings 1 over 9: 5 legal balls"
+    ],
+    "multi_wicket_deliveries": 0,
+    "runs_total_mismatches": 0,
+    "super_over_innings": 34,
+    "abandoned_matches": 6,
+    "innings_with_target": 1237,
+    "innings_over_20_overs": 0
+  },
+  "coverage_pct": {
+    "delivery.batter_resolved": 100,
+    "delivery.bowler_resolved": 100,
+    "match.city": 95.87712206952304,
+    "match.result_winner": 98.464025869038,
+    "match.toss_winner": 100,
+    "match.venue": 100,
+    "player.batting_hand": 0,
+    "player.bowling_type": 0,
+    "player.cricinfo_id": 100
+  },
+  "warnings": [
+    "batting handedness and bowling type are absent from Cricsheet and are not yet sourced; the matchup model cannot be trained until they are"
+  ]
+}

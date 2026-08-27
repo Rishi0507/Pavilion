@@ -1,0 +1,225 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"sort"
+	"strings"
+)
+
+// Quality is the data quality report emitted alongside the corpus.
+//
+// It exists because every model downstream inherits these defects silently.
+// The report is committed and diffed in CI: a drop in attribute coverage or a
+// new integrity failure fails the build rather than quietly degrading the game.
+type Quality struct {
+	GeneratedAt string `json:"generated_at"`
+	Source      struct {
+		Dir          string         `json:"dir"`
+		Files        int            `json:"files"`
+		Parsed       int            `json:"parsed"`
+		DataVersions map[string]int `json:"data_versions"`
+		License      string         `json:"license"`
+	} `json:"source"`
+
+	Matches struct {
+		Included int            `json:"included"`
+		Skipped  []string       `json:"skipped"`
+		BySeason map[string]int `json:"by_season"`
+		Venues   int            `json:"venues"`
+		Cities   int            `json:"cities"`
+		Teams    int            `json:"teams"`
+	} `json:"matches"`
+
+	Deliveries struct {
+		Total   int            `json:"total"`
+		Legal   int            `json:"legal"`
+		Wides   int            `json:"wides"`
+		NoBalls int            `json:"noballs"`
+		Byes    int            `json:"byes"`
+		LegByes int            `json:"legbyes"`
+		Penalty int            `json:"penalty"`
+		Wickets int            `json:"wickets"`
+		ByPhase map[string]int `json:"by_phase"`
+	} `json:"deliveries"`
+
+	Entity struct {
+		RegisterRows        int             `json:"register_rows"`
+		Players             int             `json:"players"`
+		AmbiguousNames      []AmbiguousName `json:"ambiguous_names"`
+		MultiAlias          []AliasRecord   `json:"multi_alias_ids"`
+		UnregisteredNames   map[string]int  `json:"unregistered_names"`
+		MissingFromRegister []string        `json:"missing_from_register"`
+		CricinfoIDCoverage  float64         `json:"cricinfo_id_coverage_pct"`
+	} `json:"entity"`
+
+	Integrity struct {
+		BallIndexMismatches  int      `json:"ball_index_mismatches"`
+		BallIndexSamples     []string `json:"ball_index_samples"`
+		MiscountedOvers      []string `json:"miscounted_overs"`
+		MultiWicketBalls     int      `json:"multi_wicket_deliveries"`
+		RunsTotalMismatches  int      `json:"runs_total_mismatches"`
+		SuperOverInnings     int      `json:"super_over_innings"`
+		AbandonedMatches     int      `json:"abandoned_matches"`
+		InningsWithTarget    int      `json:"innings_with_target"`
+		NonStandardOverCount int      `json:"innings_over_20_overs"`
+	} `json:"integrity"`
+
+	// Coverage is the percentage of records carrying each attribute. The two
+	// entries that matter most are the ones Cricsheet does not supply at all.
+	Coverage map[string]float64 `json:"coverage_pct"`
+
+	Warnings []string `json:"warnings"`
+}
+
+// AmbiguousName is one display name that resolves to more than one person.
+// These are the dangerous ones: keyed by name, two different cricketers' balls
+// would be merged into a single set of rates.
+type AmbiguousName struct {
+	Name string   `json:"name"`
+	IDs  []string `json:"ids"`
+}
+
+// AliasRecord is one person recorded under several display names.
+type AliasRecord struct {
+	ID    string   `json:"id"`
+	Names []string `json:"names"`
+}
+
+func (q *Quality) warn(format string, a ...any) {
+	q.Warnings = append(q.Warnings, fmt.Sprintf(format, a...))
+}
+
+// WriteJSON writes the machine-readable report.
+func (q *Quality) WriteJSON(path string) error {
+	b, err := json.MarshalIndent(q, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal quality report: %w", err)
+	}
+	if err := os.WriteFile(path, append(b, '\n'), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
+}
+
+// WriteMarkdown writes the human-readable report. This is the one you actually
+// read before trusting a model.
+func (q *Quality) WriteMarkdown(path string) error {
+	var s strings.Builder
+	p := func(format string, a ...any) { fmt.Fprintf(&s, format+"\n", a...) }
+
+	p("# Manhattan data quality report")
+	p("")
+	p("Generated %s from `%s`.", q.GeneratedAt, q.Source.Dir)
+	p("Source licence: %s", q.Source.License)
+	p("")
+	p("## Corpus")
+	p("")
+	p("| | |")
+	p("|---|---:|")
+	p("| Match files | %d |", q.Source.Files)
+	p("| Matches included | %d |", q.Matches.Included)
+	p("| Matches skipped | %d |", len(q.Matches.Skipped))
+	p("| Deliveries | %d |", q.Deliveries.Total)
+	p("| Legal deliveries | %d |", q.Deliveries.Legal)
+	p("| Wickets | %d |", q.Deliveries.Wickets)
+	p("| Players | %d |", q.Entity.Players)
+	p("| Venues | %d |", q.Matches.Venues)
+	p("| Teams | %d |", q.Matches.Teams)
+	p("")
+
+	p("## Attribute coverage")
+	p("")
+	p("| Attribute | Coverage |")
+	p("|---|---:|")
+	keys := make([]string, 0, len(q.Coverage))
+	for k := range q.Coverage {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		p("| %s | %.2f%% |", k, q.Coverage[k])
+	}
+	p("")
+
+	p("## Entity resolution")
+	p("")
+	p("Cricsheet embeds a per-match `registry.people` map from display name to a")
+	p("stable person identifier, so name drift across seasons is resolved")
+	p("upstream. The corpus keys every player by that identifier, never by name.")
+	p("")
+	p("- People register rows: %d", q.Entity.RegisterRows)
+	p("- Players in the corpus: %d", q.Entity.Players)
+	p("- Cricinfo id coverage: %.2f%%", q.Entity.CricinfoIDCoverage)
+	p("- Names in deliveries absent from their match registry: %d", len(q.Entity.UnregisteredNames))
+	p("- Corpus players absent from the people register: %d", len(q.Entity.MissingFromRegister))
+	p("")
+	if len(q.Entity.AmbiguousNames) > 0 {
+		p("### Ambiguous display names (%d)", len(q.Entity.AmbiguousNames))
+		p("")
+		p("One name, more than one cricketer. Keying rates by name would merge them.")
+		p("")
+		p("| Name | Identifiers |")
+		p("|---|---|")
+		for _, a := range q.Entity.AmbiguousNames {
+			p("| %s | `%s` |", a.Name, strings.Join(a.IDs, "`, `"))
+		}
+		p("")
+	}
+	if len(q.Entity.MultiAlias) > 0 {
+		p("### Identifiers with multiple display names (%d)", len(q.Entity.MultiAlias))
+		p("")
+		p("| Identifier | Names |")
+		p("|---|---|")
+		for _, a := range q.Entity.MultiAlias {
+			p("| `%s` | %s |", a.ID, strings.Join(a.Names, ", "))
+		}
+		p("")
+	}
+
+	p("## Integrity")
+	p("")
+	p("| Check | Count |")
+	p("|---|---:|")
+	p("| Legal-ball index disagrees with `actual_delivery` | %d |", q.Integrity.BallIndexMismatches)
+	p("| Overs miscounted by the umpire | %d |", len(q.Integrity.MiscountedOvers))
+	p("| Deliveries with more than one wicket | %d |", q.Integrity.MultiWicketBalls)
+	p("| `runs.total` disagrees with its components | %d |", q.Integrity.RunsTotalMismatches)
+	p("| Super-over innings (excluded from modelling) | %d |", q.Integrity.SuperOverInnings)
+	p("| Abandoned matches (no result) | %d |", q.Integrity.AbandonedMatches)
+	p("| Innings carrying a target | %d |", q.Integrity.InningsWithTarget)
+	p("")
+	if len(q.Integrity.MiscountedOvers) > 0 {
+		p("Miscounted overs (an umpire signalled five or seven balls; the")
+		p("`actual_delivery` cross-check is legitimately expected to fail here):")
+		p("")
+		for _, m := range q.Integrity.MiscountedOvers {
+			p("- %s", m)
+		}
+		p("")
+	}
+
+	if len(q.Warnings) > 0 {
+		p("## Warnings (%d)", len(q.Warnings))
+		p("")
+		for _, w := range q.Warnings {
+			p("- %s", w)
+		}
+		p("")
+	}
+
+	if len(q.Matches.Skipped) > 0 {
+		p("## Skipped matches (%d)", len(q.Matches.Skipped))
+		p("")
+		for _, m := range q.Matches.Skipped {
+			p("- %s", m)
+		}
+		p("")
+	}
+
+	if err := os.WriteFile(path, []byte(s.String()), 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
+}
