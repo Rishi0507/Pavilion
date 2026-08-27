@@ -5,6 +5,9 @@
 # Generated corpus. A build artifact of `make etl`.
 /data/out/*.bin
 
+# Cached HTTP responses from the attribute pipeline. Regenerable, and large.
+/data/raw/wpcache/
+
 # Trained model artifacts.
 /data/models/
 
