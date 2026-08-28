@@ -310,3 +310,109 @@ func (e *Engine) SituationFor(s *sim.State, bowler int) features.State {
 
 // Rates exposes the fitted rate table for inspection tooling.
 func (e *Engine) Rates() *rates.Table { return e.ctx.Rates() }
+
+// Name returns the grade as a stable identifier for templates and JSON.
+func (g Grade) Name() string {
+	switch g {
+	case Good:
+		return "good"
+	case Bad:
+		return "bad"
+	}
+	return "level"
+}
+
+// VenueName returns the ground's name.
+func (e *Engine) VenueName(v corpus.VenueID) string {
+	if int(v) < len(e.store.Venues) {
+		return e.store.Venues[v]
+	}
+	return "unknown ground"
+}
+
+// ClassName renders a bowling class for display.
+func ClassName(c attr.BowlClass) string { return className(c) }
+
+// HandName renders a batting hand for display.
+func HandName(h attr.Hand) string {
+	switch h {
+	case attr.LeftHandBat:
+		return "left-hand bat"
+	case attr.RightHandBat:
+		return "right-hand bat"
+	}
+	return ""
+}
+
+// CaptainPick chooses the bowler for the AI side during the chase half.
+//
+// It plays the same tactic the reference policy does: hold the two best death
+// bowlers back until the last five overs. That is what makes the player's
+// attacking budget a real decision, because the good bowlers will still be
+// there at the end.
+func (e *Engine) CaptainPick(s *sim.State) int {
+	legal := s.LegalBowlers()
+	if len(legal) == 0 {
+		return 0
+	}
+	probs := make([]float64, corpus.NumOutcomes)
+	cost := func(st *sim.State, b int) float64 {
+		if err := e.Probabilities(e.SituationFor(st, b), probs); err != nil {
+			return 0
+		}
+		total := 0.0
+		for k := range corpus.NumOutcomes {
+			switch corpus.Outcome(k) {
+			case corpus.One, corpus.Wide, corpus.NoBall:
+				total += probs[k]
+			case corpus.Two:
+				total += 2 * probs[k]
+			case corpus.Three:
+				total += 3 * probs[k]
+			case corpus.Four:
+				total += 4 * probs[k]
+			case corpus.Six:
+				total += 6 * probs[k]
+			case corpus.Wicket:
+				total -= 2 * probs[k]
+			}
+		}
+		return total
+	}
+
+	death := *s
+	death.Over = 18
+	death.LegalBalls = 108
+	order := make([]int, len(s.Puzzle.Attack))
+	for i := range order {
+		order[i] = i
+	}
+	sort.Slice(order, func(i, j int) bool { return cost(&death, order[i]) < cost(&death, order[j]) })
+
+	reserved := map[int]bool{order[0]: true}
+	if len(order) > 1 {
+		reserved[order[1]] = true
+	}
+	if s.Over < 15 {
+		best, bestCost := -1, 1e9
+		for _, b := range legal {
+			if reserved[b] {
+				continue
+			}
+			if c := cost(s, b); c < bestCost {
+				best, bestCost = b, c
+			}
+		}
+		if best >= 0 {
+			return best
+		}
+	}
+	for _, b := range order {
+		for _, l := range legal {
+			if l == b {
+				return b
+			}
+		}
+	}
+	return legal[0]
+}

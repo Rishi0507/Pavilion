@@ -8,7 +8,7 @@ RAW     := data/raw
 OUT     := data/out
 MATCHES := $(RAW)/ipl_json
 
-.PHONY: all data etl attrs rates features model winprob puzzles sweep play check baseline bench test lint clean
+.PHONY: all data etl attrs rates features model winprob puzzles sweep serve dev play check baseline bench test lint clean
 
 all: etl attrs rates features model winprob test
 
@@ -61,6 +61,14 @@ puzzles: data/models/winprob.txt
 ## sweep: print how targets and attacks behave, for calibrating the criteria
 sweep:
 	$(GO) run ./cmd/parpuzzle -sweep -games 400
+
+## serve: run the game on localhost
+serve:
+	$(GO) run ./cmd/parsrv -addr 127.0.0.1:8080
+
+## dev: same, but serve the frontend from disk so a refresh picks up edits
+dev:
+	$(GO) run ./cmd/parsrv -addr 127.0.0.1:8080 -dev
 
 ## play: play today's puzzle at a terminal
 play:

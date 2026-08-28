@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en" data-theme="board">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Par · a daily cricket puzzle</title>
+<meta name="description" content="One target. Two innings. Three minutes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/par.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark">PAR</h1>
+  <p class="tagline">One target. Two innings.</p>
+  <p class="dateline" id="dateline">—</p>
+</header>
+
+<main id="app">
+
+  <!-- Start -->
+  <section class="card" id="screen-start" hidden>
+    <div class="fixture">
+      <div class="fixture-target">
+        <span class="label">TARGET</span>
+        <span class="target-figure" id="start-target">—</span>
+      </div>
+      <div class="fixture-venue">
+        <span class="label">GROUND</span>
+        <span id="start-venue">—</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      You play both innings of the same target. First you defend it: five
+      bowlers, four overs each, and one decision every over. Then you chase it
+      with six attacking overs to spend.
+    </p>
+
+    <h2 class="rule-heading">Your attack</h2>
+    <ul class="attack-list" id="start-attack"></ul>
+
+    <p class="unvalidated" id="start-unvalidated" hidden>
+      This day was not pre-validated. Run <code>make puzzles</code> for a
+      Monte&nbsp;Carloed one.
+    </p>
+
+    <button class="primary" id="btn-start">Start defending</button>
+  </section>
+
+  <!-- Play -->
+  <section id="screen-play" hidden>
+
+    <div class="scoreboard">
+      <div class="sb-main">
+        <span class="sb-score" id="sb-score">0</span><span class="sb-sep">/</span><span class="sb-wkts" id="sb-wkts">0</span>
+      </div>
+      <div class="sb-need">
+        <span class="label" id="sb-need-label">NEED</span>
+        <span id="sb-need">—</span>
+      </div>
+      <div class="sb-wp">
+        <span class="label" id="sb-wp-label">DEFENDING</span>
+        <span class="sb-wp-figure" id="sb-wp">—</span>
+      </div>
+    </div>
+
+    <div class="strip-wrap">
+      <div class="strip" id="strip-defend" aria-label="Defend innings, over by over"></div>
+      <div class="strip" id="strip-chase" aria-label="Chase innings, over by over" hidden></div>
+    </div>
+
+    <div class="over-head">
+      <span class="over-no" id="over-no">OVER 1</span>
+      <span class="striker" id="striker">—</span>
+    </div>
+
+    <div class="balls" id="balls" aria-live="polite"></div>
+
+    <!-- Defend controls -->
+    <div id="controls-defend">
+      <h2 class="rule-heading">Who bowls?</h2>
+      <div class="bowlers" id="bowlers"></div>
+    </div>
+
+    <!-- Chase controls -->
+    <div id="controls-chase" hidden>
+      <h2 class="rule-heading">
+        How do you play it?
+        <span class="tokens" id="tokens" aria-label="attacking overs left"></span>
+      </h2>
+      <div class="intents">
+        <button class="intent" data-intent="block"><span class="intent-name">Block</span><span class="intent-sub">protect wickets</span></button>
+        <button class="intent" data-intent="rotate"><span class="intent-name">Rotate</span><span class="intent-sub">keep it ticking</span></button>
+        <button class="intent" data-intent="attack" id="intent-attack"><span class="intent-name">Attack</span><span class="intent-sub">spend a token</span></button>
+      </div>
+    </div>
+
+    <p class="handover" id="handover" hidden></p>
+  </section>
+
+  <!-- Result -->
+  <section class="card" id="screen-result" hidden>
+    <h2 class="result-verdict" id="result-verdict">—</h2>
+
+    <pre class="share" id="share">—</pre>
+
+    <div class="result-figures">
+      <div><span class="label">DECISION SCORE</span><span class="figure" id="result-score">—</span></div>
+      <div><span class="label">PERCENTILE</span><span class="figure" id="result-pct">—</span></div>
+      <div><span class="label">STREAK</span><span class="figure" id="result-streak">—</span></div>
+    </div>
+
+    <p class="prose" id="result-day"></p>
+
+    <div class="result-actions">
+      <button class="primary" id="btn-copy">Copy result</button>
+      <button class="ghost" id="btn-again">Play again</button>
+    </div>
+  </section>
+
+  <p class="error" id="error" hidden></p>
+</main>
+
+<footer class="colophon">
+  <p>
+    Ball-by-ball data from <a href="https://cricsheet.org">Cricsheet</a>, by Stephen Rushe,
+    under ODC-BY 1.0. Player attributes from Wikipedia, under CC BY-SA 4.0.
+  </p>
+  <p>
+    An unofficial fan project. Not affiliated with, endorsed by or connected to
+    the BCCI, the IPL or any franchise. Sides are referred to by city.
+  </p>
+</footer>
+
+<script src="/static/par.js" defer></script>
+</body>
+</html>

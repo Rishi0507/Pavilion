@@ -11,6 +11,11 @@
 # Exported training matrices. Regenerable from the corpus.
 /data/out/*.csv
 
+# The results database. Local play data, not source.
+/data/out/*.db
+/data/out/*.db-shm
+/data/out/*.db-wal
+
 # The LightGBM text model is four megabytes of trees; the metadata, the
 # parity fixtures and the reliability plots are small and are committed,
 # because they are the evidence that the model is calibrated and that Go

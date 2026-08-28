@@ -8,7 +8,7 @@ of high-intent overs.
 The game ships as **Par**. `Manhattan` is the project and repository name, after
 the per-over bar chart that gives the game its visual language.
 
-**Status: milestone 9 of 11. Playable.** `make play`
+**Status: complete through milestone 11.** `make serve` and open http://127.0.0.1:8080
 
 ---
 
@@ -183,8 +183,8 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 7. **Win probability model and the share grid** ✅
 8. **Chase half** ✅
 9. **Daily pipeline** ✅
-10. Design pass
-11. Leaderboards, stats, sharing, streaks
+10. **Design pass** ✅
+11. **Leaderboards, stats, sharing, streaks** ✅
 
 ## Milestone 9: the daily pipeline
 
