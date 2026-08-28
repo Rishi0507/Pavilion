@@ -34,6 +34,12 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* An author rule that sets display beats the browser's own [hidden] rule, so
+ * anything given a display value here would stay visible when hidden. Restating
+ * it once, with weight, is less fragile than remembering the interaction at
+ * every call site. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
