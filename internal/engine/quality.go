@@ -93,23 +93,39 @@ func (e *Engine) applyQuality(s features.State, p []float64) {
 	if want <= 0 {
 		return
 	}
+	newtonTo(p, want)
+}
 
-	// Expected runs increase monotonically with the tilt, so a bisection on
-	// lambda converges quickly and cannot overshoot.
+// newtonTo tilts a distribution in place until its expected runs reach want.
+func newtonTo(p []float64, want float64) {
+	if want <= 0 {
+		return
+	}
+
+	// Expected runs rise monotonically with the tilt, and the derivative of the
+	// tilted mean is exactly the tilted variance, so Newton's method converges
+	// in a handful of steps where a bisection needed two dozen. This is on the
+	// hot path: puzzle validation simulates millions of deliveries.
 	tilted := make([]float64, corpus.NumOutcomes)
-	lo, hi := -maxTilt, maxTilt
-	for range 24 {
-		mid := (lo + hi) / 2
-		sim.Tilt(p, runValueOf[:], mid, tilted)
-		if expectedRunsOf(tilted) < want {
-			lo = mid
-		} else {
-			hi = mid
-		}
-		if hi-lo < 1e-6 {
+	lambda := 0.0
+	for range 6 {
+		sim.Tilt(p, runValueOf[:], lambda, tilted)
+		mean := expectedRunsOf(tilted)
+		diff := mean - want
+		if math.Abs(diff) < 1e-6 {
 			break
 		}
+		variance := 0.0
+		for k := range corpus.NumOutcomes {
+			d := runValueOf[k] - mean
+			variance += tilted[k] * d * d
+		}
+		if variance < 1e-9 {
+			break
+		}
+		lambda -= diff / variance
+		lambda = min(max(lambda, -maxTilt), maxTilt)
 	}
-	sim.Tilt(p, runValueOf[:], (lo+hi)/2, tilted)
+	sim.Tilt(p, runValueOf[:], lambda, tilted)
 	copy(p, tilted)
 }

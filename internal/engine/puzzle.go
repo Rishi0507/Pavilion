@@ -262,3 +262,34 @@ func className(c attr.BowlClass) string {
 	}
 	return "unknown"
 }
+
+// FromQueued rebuilds a puzzle from an approved queue entry.
+//
+// The queue stores player identifiers rather than a re-derivation recipe, so a
+// day that was validated is the day that gets played. Regenerating it from the
+// key would work only as long as nothing about selection ever changed, and the
+// first change to the pool would silently invalidate every queued day.
+func (e *Engine) FromQueued(date string, target uint16, venue corpus.VenueID,
+	attackIDs, battingIDs []uint16) (*sim.Puzzle, error) {
+
+	if len(attackIDs) != 5 {
+		return nil, fmt.Errorf("engine: queued puzzle has %d bowlers, want 5", len(attackIDs))
+	}
+	if len(battingIDs) < 2 {
+		return nil, fmt.Errorf("engine: queued puzzle has %d batters", len(battingIDs))
+	}
+	p := &sim.Puzzle{Date: date, Target: target, Venue: venue}
+	for _, id := range attackIDs {
+		if int(id) >= len(e.store.Players) {
+			return nil, fmt.Errorf("engine: queued bowler id %d is not in the corpus", id)
+		}
+		p.Attack = append(p.Attack, e.player(corpus.PlayerID(id)))
+	}
+	for _, id := range battingIDs {
+		if int(id) >= len(e.store.Players) {
+			return nil, fmt.Errorf("engine: queued batter id %d is not in the corpus", id)
+		}
+		p.Batting = append(p.Batting, e.player(corpus.PlayerID(id)))
+	}
+	return p, nil
+}

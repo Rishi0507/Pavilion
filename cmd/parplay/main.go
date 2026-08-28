@@ -11,20 +11,50 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"manhattan/internal/corpus"
 	"manhattan/internal/engine"
+	"manhattan/internal/puzzle"
 	"manhattan/internal/sim"
 )
+
+// loadPuzzle prefers the approved queue, which is the only path that has been
+// Monte Carloed. An explicit target overrides it, and an unqueued date falls
+// back to generating one, both of which exist for development rather than for
+// anyone actually playing: a puzzle nobody checked can easily be a day where
+// everyone wins.
+func loadPuzzle(e *engine.Engine, queuePath, date string, key sim.DailyKey, target uint16) (*sim.Puzzle, error) {
+	if target == 0 {
+		q, err := puzzle.LoadQueue(queuePath)
+		if err == nil {
+			if entry, ok := q.For(date); ok {
+				p, err := e.FromQueued(date, entry.Target, corpus.VenueID(entry.VenueID),
+					entry.AttackIDs, entry.BattingIDs)
+				if err != nil {
+					return nil, err
+				}
+				fmt.Printf("(validated puzzle: reference play defends %.0f%%, chases %.0f%%)\n",
+					100*entry.Evaluation.DefendRate, 100*entry.Evaluation.ChaseRate)
+				return p, nil
+			}
+		}
+		target = 190
+		fmt.Fprintf(os.Stderr,
+			"parplay: no queued puzzle for %s, generating an unvalidated one at %d\n", date, target)
+	}
+	return e.BuildPuzzle(date, key, target)
+}
 
 func main() {
 	var (
 		date   = flag.String("date", "2026-08-28", "puzzle date")
 		secret = flag.String("secret", "manhattan-development-secret", "master secret")
-		target = flag.Int("target", 187, "target to defend")
+		target = flag.Int("target", 0, "target to defend; 0 uses the queued puzzle for the date")
+		queue  = flag.String("queue", filepath.Join("data", "out", "puzzles.json"), "approved puzzle queue")
 		auto   = flag.Int("auto", 0, "play N automated runs instead of one interactive one")
 		policy = flag.String("policy", "best", "automated policy: best, worst, random, saveBest")
 		chase  = flag.Bool("chase", false, "measure the chase half instead of the defend half")
@@ -41,11 +71,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "parplay:", err)
 		os.Exit(1)
 	}
-	puzzle, err := e.BuildPuzzle(*date, key, uint16(*target))
+	pz, err := loadPuzzle(e, *queue, *date, key, uint16(*target))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "parplay:", err)
 		os.Exit(1)
 	}
+	puzzle := pz
 
 	if *auto > 0 {
 		if *chase {

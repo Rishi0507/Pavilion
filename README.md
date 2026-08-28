@@ -183,7 +183,7 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
    not fun in isolation, nothing later fixes it
 7. Win probability model and the share grid
 8. Chase half
-9. Daily pipeline
+9. **Daily pipeline** ✅
 10. Design pass
 11. Leaderboards, stats, sharing, streaks
 
