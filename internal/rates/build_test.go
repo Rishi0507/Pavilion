@@ -119,7 +119,7 @@ func ratesStore() (*corpus.Store, attr.Table) {
 
 func TestBuildAssignsCells(t *testing.T) {
 	s, a := ratesStore()
-	tbl := Build(s, a)
+	tbl := Build(s, a, Options{})
 
 	paceVsRHB := CellIndex(Bowling, corpus.PhaseDeath, VsRightHand)
 	spinVsLHB := CellIndex(Bowling, corpus.PhaseDeath, VsLeftHand)
@@ -150,7 +150,7 @@ func TestBuildAssignsCells(t *testing.T) {
 // about a matchup, so it must not silently land in some default cell.
 func TestUnknownAttributesAreExcluded(t *testing.T) {
 	s, a := ratesStore()
-	tbl := Build(s, a)
+	tbl := Build(s, a, Options{})
 
 	for c := range NumCells {
 		if got := tbl.Players[4].Cells[c].Deliveries; got != 0 {
@@ -171,7 +171,7 @@ func TestUnknownAttributesAreExcluded(t *testing.T) {
 
 func TestPlayersWithNoDataGetThePriorAtZeroWeight(t *testing.T) {
 	s, a := ratesStore()
-	tbl := Build(s, a)
+	tbl := Build(s, a, Options{})
 
 	// The spin bowler never bowled to a right-hander.
 	c := CellIndex(Bowling, corpus.PhaseDeath, VsRightHand)
@@ -192,7 +192,7 @@ func TestPlayersWithNoDataGetThePriorAtZeroWeight(t *testing.T) {
 
 func TestPosteriorsAreDistributions(t *testing.T) {
 	s, a := ratesStore()
-	tbl := Build(s, a)
+	tbl := Build(s, a, Options{})
 	for i := range tbl.Players {
 		for c := range NumCells {
 			total := 0.0
@@ -260,7 +260,7 @@ func TestShrinkagePullsTowardThePopulation(t *testing.T) {
 	}
 	s.Inn.End = []uint32{uint32(s.D.Len())}
 
-	tbl := Build(s, a)
+	tbl := Build(s, a, Options{})
 
 	// Player 2 conceded a boundary off all ten of his deliveries. The
 	// population concedes a single a ball. His posterior must land far closer
@@ -296,7 +296,7 @@ func TestShrinkagePullsTowardThePopulation(t *testing.T) {
 
 func TestSaveLoadRoundTrip(t *testing.T) {
 	s, a := ratesStore()
-	want := Build(s, a)
+	want := Build(s, a, Options{})
 
 	path := filepath.Join(t.TempDir(), "rates.bin")
 	if err := Save(want, path); err != nil {
@@ -338,7 +338,7 @@ func TestLoadRejectsGarbage(t *testing.T) {
 // merged in proportion to how much data each holds, not averaged blindly.
 func TestPhaseCombinesOppositionClasses(t *testing.T) {
 	s, a := ratesStore()
-	tbl := Build(s, a)
+	tbl := Build(s, a, Options{})
 
 	pr := tbl.Phase(2, Bowling, corpus.PhaseDeath)
 	if pr.Deliveries != 10 {

@@ -277,3 +277,30 @@ func (t Table) All() []Player {
 	}
 	return out
 }
+
+// MovesAway reports whether the ball moves away from the batter's body rather
+// than into it.
+//
+// This is the single most important thing the matchup classes encode. A ball
+// leaving the bat takes the outside edge and is far harder to hit through the
+// leg side; a ball coming in threatens the stumps and the pads. Which way it
+// goes depends jointly on the bowler's type and the batter's handedness, and
+// neither alone tells you anything.
+//
+// For spin the geometry is the direction of turn. For pace it is the angle
+// across the batter from the bowler's arm. In both cases the same three classes
+// move away from a right-hander and the other three move away from a
+// left-hander.
+func MovesAway(b BowlClass, h Hand) bool {
+	switch h {
+	case RightHandBat:
+		// Leg breaks turn away, left-arm orthodox turns away, and left-arm
+		// pace angles across.
+		return b == LegBreak || b == LeftArmOrthodox || b == LeftArmPace
+	case LeftHandBat:
+		// Mirrored: off breaks turn away, left-arm wrist spin turns away, and
+		// right-arm pace angles across.
+		return b == OffBreak || b == LeftArmWrist || b == RightArmPace
+	}
+	return false
+}

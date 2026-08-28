@@ -164,12 +164,24 @@ type Table struct {
 	Players []PlayerRates // indexed by corpus.PlayerID
 }
 
+// Options bounds what the fit is allowed to see.
+type Options struct {
+	// MaxSeason excludes every match after this edition year. Zero means no
+	// bound.
+	//
+	// This exists to stop the rate table leaking the future into a held-out
+	// evaluation. Rates fitted over every season and then used as features on
+	// the last two seasons would already encode the answer, and the model would
+	// look far better than it is.
+	MaxSeason uint16
+}
+
 // Build fits the rate table from the corpus and the attribute table.
 //
 // A delivery only contributes to a cell when the opposing player's attribute is
 // known, because an unclassified matchup is not evidence about a matchup. This
 // is why the attribute work had to come first.
-func Build(s *corpus.Store, a attr.Table) *Table {
+func Build(s *corpus.Store, a attr.Table, opt Options) *Table {
 	t := &Table{Players: make([]PlayerRates, len(s.Players))}
 	for i, p := range s.Players {
 		t.Players[i].CricsheetID = p.CricsheetID
@@ -191,7 +203,11 @@ func Build(s *corpus.Store, a attr.Table) *Table {
 	var runsIn [NumCells][corpus.NumOutcomes]float64
 
 	for i := range s.D.Innings {
-		if s.Inn.SuperOver[s.D.Innings[i]] {
+		inn := s.D.Innings[i]
+		if s.Inn.SuperOver[inn] {
+			continue
+		}
+		if opt.MaxSeason != 0 && s.M.Season[s.Inn.Match[inn]] > opt.MaxSeason {
 			continue
 		}
 		bat, bowl := s.D.Batter[i], s.D.Bowler[i]

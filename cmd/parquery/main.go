@@ -141,7 +141,7 @@ func (q *query) load(corpusPath, attrPath string) error {
 	}
 
 	t1 := time.Now()
-	q.g = graph.Build(st)
+	q.g = graph.Build(st, graph.Options{})
 	q.graphMS = float64(time.Since(t1).Microseconds()) / 1000
 	if err := q.g.Validate(); err != nil {
 		return err

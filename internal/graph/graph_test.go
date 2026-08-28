@@ -85,7 +85,7 @@ func testStore() *corpus.Store {
 }
 
 func TestBuildAggregatesMatchups(t *testing.T) {
-	g := Build(testStore())
+	g := Build(testStore(), Options{})
 	if err := g.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestBuildAggregatesMatchups(t *testing.T) {
 // quietly overstate every matchup: a run out says nothing about the contest
 // between bat and ball.
 func TestRunOutsAreNotCreditedToTheBowler(t *testing.T) {
-	g := Build(testStore())
+	g := Build(testStore(), Options{})
 	e, ok := g.Matchup(1, 3)
 	if !ok {
 		t.Fatal("bat1 vs bwl1 missing")
@@ -129,7 +129,7 @@ func TestRunOutsAreNotCreditedToTheBowler(t *testing.T) {
 }
 
 func TestSuperOversAreExcluded(t *testing.T) {
-	g := Build(testStore())
+	g := Build(testStore(), Options{})
 	// bat0 faced bwl1 only in the super over, so the edge must not exist.
 	if e, ok := g.Matchup(0, 3); ok {
 		t.Errorf("super-over matchup was included: %+v", e)
@@ -137,7 +137,7 @@ func TestSuperOversAreExcluded(t *testing.T) {
 }
 
 func TestBothDirectionsAgree(t *testing.T) {
-	g := Build(testStore())
+	g := Build(testStore(), Options{})
 	bowlers, batEdges := g.BowlersFaced(0)
 	if len(bowlers) != 1 || bowlers[0] != 2 {
 		t.Fatalf("BowlersFaced(bat0) = %v, want [2]", bowlers)
@@ -152,7 +152,7 @@ func TestBothDirectionsAgree(t *testing.T) {
 }
 
 func TestDegree(t *testing.T) {
-	g := Build(testStore())
+	g := Build(testStore(), Options{})
 	asBat, asBowl := g.Degree(0)
 	if asBat != 1 || asBowl != 0 {
 		t.Errorf("Degree(bat0) = (%d, %d), want (1, 0)", asBat, asBowl)
@@ -164,7 +164,7 @@ func TestDegree(t *testing.T) {
 }
 
 func TestMissingEdgesAndOutOfRangeNodes(t *testing.T) {
-	g := Build(testStore())
+	g := Build(testStore(), Options{})
 	if _, ok := g.Matchup(0, 1); ok {
 		t.Error("two batters must not have a matchup edge")
 	}
@@ -181,7 +181,7 @@ func TestMissingEdgesAndOutOfRangeNodes(t *testing.T) {
 // nothing built on top of it would be reproducible.
 func TestBuildIsDeterministic(t *testing.T) {
 	s := testStore()
-	a, b := Build(s), Build(s)
+	a, b := Build(s, Options{}), Build(s, Options{})
 	if a.Edges() != b.Edges() || a.Nodes() != b.Nodes() {
 		t.Fatalf("sizes differ: %d/%d vs %d/%d", a.Nodes(), a.Edges(), b.Nodes(), b.Edges())
 	}
@@ -217,7 +217,7 @@ func TestRealGraphIsValid(t *testing.T) {
 	if testing.Short() {
 		t.Skip("reads the full corpus")
 	}
-	g := Build(realStore(t))
+	g := Build(realStore(t), Options{})
 	if err := g.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -231,12 +231,12 @@ func BenchmarkBuild(b *testing.B) {
 	s := realStore(b)
 	b.ResetTimer()
 	for b.Loop() {
-		Build(s)
+		Build(s, Options{})
 	}
 }
 
 func BenchmarkMatchupLookup(b *testing.B) {
-	g := Build(realStore(b))
+	g := Build(realStore(b), Options{})
 	b.ResetTimer()
 	for b.Loop() {
 		g.Matchup(100, 200)

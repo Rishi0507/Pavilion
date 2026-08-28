@@ -198,3 +198,48 @@ func TestCodeRoundTrip(t *testing.T) {
 		t.Error("ParseHand: empty must yield HandUnknown")
 	}
 }
+
+// TestMovesAway pins the geometry of every matchup. Getting one of these
+// backwards would invert the most informative feature the outcome model has.
+func TestMovesAway(t *testing.T) {
+	tests := []struct {
+		name string
+		bowl BowlClass
+		hand Hand
+		want bool
+	}{
+		// Against a right-hander.
+		{"off break into the right-hander", OffBreak, RightHandBat, false},
+		{"leg break away from the right-hander", LegBreak, RightHandBat, true},
+		{"left-arm orthodox away from the right-hander", LeftArmOrthodox, RightHandBat, true},
+		{"left-arm wrist into the right-hander", LeftArmWrist, RightHandBat, false},
+		{"right-arm pace into the right-hander", RightArmPace, RightHandBat, false},
+		{"left-arm pace across the right-hander", LeftArmPace, RightHandBat, true},
+
+		// Against a left-hander, every one of those inverts.
+		{"off break away from the left-hander", OffBreak, LeftHandBat, true},
+		{"leg break into the left-hander", LegBreak, LeftHandBat, false},
+		{"left-arm orthodox into the left-hander", LeftArmOrthodox, LeftHandBat, false},
+		{"left-arm wrist away from the left-hander", LeftArmWrist, LeftHandBat, true},
+		{"right-arm pace across the left-hander", RightArmPace, LeftHandBat, true},
+		{"left-arm pace into the left-hander", LeftArmPace, LeftHandBat, false},
+
+		// Unknown handedness cannot have a geometry.
+		{"unknown hand", OffBreak, HandUnknown, false},
+		{"unknown class", BowlUnknown, RightHandBat, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := MovesAway(tc.bowl, tc.hand); got != tc.want {
+				t.Errorf("MovesAway(%v, %v) = %v, want %v", tc.bowl, tc.hand, got, tc.want)
+			}
+		})
+	}
+
+	// Every class moves away from exactly one of the two handednesses.
+	for _, b := range []BowlClass{RightArmPace, LeftArmPace, OffBreak, LegBreak, LeftArmOrthodox, LeftArmWrist} {
+		if MovesAway(b, RightHandBat) == MovesAway(b, LeftHandBat) {
+			t.Errorf("%v moves the same way against both hands", b)
+		}
+	}
+}

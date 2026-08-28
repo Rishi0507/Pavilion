@@ -95,15 +95,27 @@ type pair struct {
 	bat, bowl corpus.PlayerID
 }
 
+// Options bounds what the graph is allowed to see.
+type Options struct {
+	// MaxSeason excludes every match after this edition year. Zero means no
+	// bound. As with the rate table, this exists so that matchup features used
+	// on a held-out season do not already contain that season's results.
+	MaxSeason uint16
+}
+
 // Build constructs the matchup graph from the corpus.
 //
 // Super overs are excluded, consistent with every other aggregation: a one-over
 // shootout would inflate death-overs matchups that never really happened.
-func Build(s *corpus.Store) *Graph {
+func Build(s *corpus.Store, opt Options) *Graph {
 	acc := make(map[pair]*Edge, 1<<16)
 
 	for i := range s.D.Innings {
-		if s.Inn.SuperOver[s.D.Innings[i]] {
+		inn := s.D.Innings[i]
+		if s.Inn.SuperOver[inn] {
+			continue
+		}
+		if opt.MaxSeason != 0 && s.M.Season[s.Inn.Match[inn]] > opt.MaxSeason {
 			continue
 		}
 		bat, bowl := s.D.Batter[i], s.D.Bowler[i]

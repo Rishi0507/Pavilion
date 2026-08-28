@@ -53,7 +53,7 @@ func run(log *slog.Logger, corpusPath, attrPath, outPath, reportPath string, min
 	}
 
 	started := time.Now()
-	t := rates.Build(st, attrs)
+	t := rates.Build(st, attrs, rates.Options{})
 	log.Info("rate table fitted",
 		"players", len(t.Players), "cells", rates.NumCells,
 		"took", time.Since(started).Round(time.Millisecond))
