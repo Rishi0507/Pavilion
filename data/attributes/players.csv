@@ -3,10 +3,10 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 0184dc35,R Dravid,28114,RHB,OB,Right-handed,Right arm off break,sourced,wikipedia:Rahul Dravid,2026-08-27
 034b4b7d,VRV Singh,35281,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:V. R. V. Singh,2026-08-27
 03806cf8,JR Hazlewood,288284,LHB,RAP,Left-handed,Right-arm fast-medium,sourced,wikipedia:Josh Hazlewood,2026-08-27
-04a418e8,R Parag,1079434,RHB,LB,Right-handed,"Right-arm off break, leg break",sourced,wikipedia:Riyan Parag,2026-08-27
+04a418e8,R Parag,1079434,RHB,,Right-handed,"Right-arm off break, leg break",sourced,wikipedia:Riyan Parag,2026-08-27
 05c2ca46,RE van der Merwe,47850,RHB,SLA,Right-handed,Slow left-arm orthodox,sourced,wikipedia:Roelof van der Merwe,2026-08-27
 0604ef16,SB Bangar,27225,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Sanjay Bangar,2026-08-27
-0890552f,A Manohar,778963,RHB,,Right-handed,Leg break googly,sourced,wikipedia:Abhinav Manohar,2026-08-27
+0890552f,A Manohar,778963,RHB,LB,Right-handed,Leg break googly,sourced,wikipedia:Abhinav Manohar,2026-08-27
 0994d0ae,V Shankar,477021,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Vijay Shankar,2026-08-27
 0a3d54b9,VR Aaron,360911,RHB,RAP,Right-handed,Right-arm fast,sourced,wikipedia:Varun Aaron,2026-08-27
 0a476045,S Dhawan,28235,LHB,OB,Left-handed,Right-arm off break,sourced,wikipedia:Shikhar Dhawan,2026-08-27
@@ -14,7 +14,7 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 0a67aec0,Akash Deep,1176959,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:Akash Deep,2026-08-27
 0a8fce53,Mustafizur Rahman,330902,LHB,LAP,Left-handed,Left-arm fast-medium,sourced,wikipedia:Mustafizur Rahman,2026-08-27
 0bacade8,Rahmanullah Gurbaz,974087,RHB,,Right-handed,,sourced,wikipedia:Rahmanullah Gurbaz,2026-08-27
-0c2730df,A Kumble,30176,RHB,,Right-handed,Leg break,sourced,wikipedia:Anil Kumble,2026-08-27
+0c2730df,A Kumble,30176,RHB,LB,Right-handed,Leg break,sourced,wikipedia:Anil Kumble,2026-08-27
 0c432afb,P Parameswaran,279562,RHB,LAP,Right-handed,Left-arm fast-medium,sourced,wikipedia:Prasanth Parameswaran,2026-08-27
 0c94f480,UBT Chand,446499,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Unmukt Chand,2026-08-27
 0c9652b0,HR Shokeen,1175423,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Hrithik Shokeen,2026-08-27
@@ -53,7 +53,7 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 25228673,Harsh Dubey,1216159,LHB,SLA,Left-handed,Slow left-arm orthodox,sourced,wikipedia:Harsh Dubey,2026-08-27
 25eeb281,PC Valthaty,35630,RHB,OB,Right-handed,Right-arm offbreak,sourced,wikipedia:Paul Valthaty,2026-08-27
 260fd380,AM Salvi,34264,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:Aavishkar Salvi,2026-08-27
-26989d80,Shashank Singh,377534,RHB,,Right-handed,,sourced,wikipedia:Shashank Singh,2026-08-27
+26989d80,Shashank Singh,377534,RHB,,Right-handed,"Right-arm medium, Right-arm offbreak",sourced,wikipedia:Shashank Singh,2026-08-27
 26a85969,R Dhawan,290727,RHB,RAP,Right-handed,Right-arm medium-fast,sourced,wikipedia:Rishi Dhawan,2026-08-27
 26e5cabf,MK Tiwary,35565,RHB,LB,Right-handed,Right-arm leg break,sourced,wikipedia:Manoj Tiwary (cricketer),2026-08-27
 271f83cd,SA Yadav,446507,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Suryakumar Yadav,2026-08-27
@@ -88,7 +88,7 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 350bb1b1,AF Milne,450860,RHB,RAP,Right-handed,Right-arm fast,sourced,wikipedia:Adam Milne,2026-08-27
 35205dfc,DR Smith,53118,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Dwayne Smith,2026-08-27
 3576e47e,S Badrinath,26806,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Subramaniam Badrinath,2026-08-27
-36619795,Zeeshan Ansari,942371,RHB,,Right-handed,Legbreak googly,sourced,wikipedia:Zeeshan Ansari,2026-08-27
+36619795,Zeeshan Ansari,942371,RHB,LB,Right-handed,Legbreak googly,sourced,wikipedia:Zeeshan Ansari,2026-08-27
 372455c4,Q de Kock,379143,LHB,,Left-handed,| role = Wicket-keeper,sourced,wikipedia:Quinton de Kock,2026-08-27
 39a2dfa8,R Tewatia,423838,LHB,LB,Left-handed,Right-arm leg break,sourced,wikipedia:Rahul Tewatia,2026-08-27
 39f01cdb,KP Pietersen,19296,RHB,OB,Right-handed,Right arm off break,sourced,wikipedia:Kevin Pietersen,2026-08-27
@@ -101,7 +101,7 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 3eac9d95,JDP Oram,38062,LHB,RAP,Left-handed,Right-arm fast-medium,sourced,wikipedia:Jacob Oram,2026-08-27
 3edb58fc,AD Mascarenhas,16932,RHB,RAP,Right-handed,Right-arm medium-fast,sourced,wikipedia:Dimitri Mascarenhas,2026-08-27
 3fb19989,MA Starc,311592,LHB,LAP,Left-handed,Left-arm fast,sourced,wikipedia:Mitchell Starc,2026-08-27
-3fca55af,S Sohal,228943,RHB,,Right handed,Legbreak,sourced,wikipedia:Sunny Sohal,2026-08-27
+3fca55af,S Sohal,228943,RHB,LB,Right handed,Legbreak,sourced,wikipedia:Sunny Sohal,2026-08-27
 4125d931,J Suchith,527663,LHB,SLA,Left-handed,Slow left-arm orthodox,sourced,wikipedia:Jagadeesha Suchith,2026-08-27
 41eb4a4f,R Vinay Kumar,35731,RHB,RAP,Right-handed,Right-arm medium-fast,sourced,wikipedia:Vinay Kumar,2026-08-27
 4329fbb5,SR Watson,8180,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:Shane Watson,2026-08-27
@@ -130,7 +130,7 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 4f629497,SE Bond,36326,RHB,RAP,Right-handed,Right-arm fast,sourced,wikipedia:Shane Bond,2026-08-27
 5056011d,GJ Bailey,4451,RHB,RAP,Right-handed,Right-arm medium,sourced,"wikipedia:George Bailey (cricketer, born 1982)",2026-08-27
 508a1ea7,SE Marsh,6683,LHB,SLA,Left-handed,Slow left-arm orthodox,sourced,wikipedia:Shaun Marsh,2026-08-27
-50c6bc2b,LS Livingstone,403902,RHB,,Right-handed,,sourced,wikipedia:Liam Livingstone,2026-08-27
+50c6bc2b,LS Livingstone,403902,RHB,,Right-handed,"Right-arm off break, leg break",sourced,wikipedia:Liam Livingstone,2026-08-27
 51a3c5ef,MJ McClenaghan,319439,LHB,LAP,Left-handed,Left-arm fast medium,sourced,wikipedia:Mitchell McClenaghan,2026-08-27
 529eb9e0,OC McCoy,906783,LHB,LAP,Left-handed,Left-arm fast-medium,sourced,wikipedia:Obed McCoy,2026-08-27
 541f85c9,SP Goswami,302579,LHB,RAP,Left-handed,Right-arm medium,sourced,wikipedia:Shreevats Goswami,2026-08-27
@@ -152,10 +152,10 @@ cricsheet_id,name,cricinfo_id,batting_hand,bowling_class,batting_raw,bowling_raw
 5bdcdb72,TM Dilshan,48472,RHB,OB,Right-handed,Right-arm off spin,sourced,wikipedia:Tillakaratne Dilshan,2026-08-27
 5d096f3d,RR Powar,32391,RHB,OB,Right-handed,Right-arm off spin,sourced,wikipedia:Ramesh Powar,2026-08-27
 5d2eea49,Kartik Tyagi,1122918,RHB,RAP,Right-handed,Right arm fast,sourced,wikipedia:Kartik Tyagi,2026-08-27
-5d9a1a73,R Sharma,272994,RHB,,Right-handed,Legbreak googly,sourced,"wikipedia:Rahul Sharma (cricketer, born 1986)",2026-08-27
+5d9a1a73,R Sharma,272994,RHB,LB,Right-handed,Legbreak googly,sourced,"wikipedia:Rahul Sharma (cricketer, born 1986)",2026-08-27
 5f26df4f,VS Malik,31738,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Vikramjeet Malik,2026-08-27
 5f4e9e8f,RR Raje,290713,RHB,RAP,Right-handed,Right-armed fast-medium,sourced,wikipedia:Rohan Raje,2026-08-27
-5f547c8b,Rashid Khan,793463,RHB,,Right-handed,Leg break googly,sourced,wikipedia:Rashid Khan,2026-08-27
+5f547c8b,Rashid Khan,793463,RHB,LB,Right-handed,Leg break googly,sourced,wikipedia:Rashid Khan,2026-08-27
 5fa06777,IK Pathan,32685,LHB,LAP,Left-handed,Left-arm medium-fast,sourced,wikipedia:Irfan Pathan,2026-08-27
 626c5379,R Sathish,33870,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Rajagopal Sathish,2026-08-27
 62af8546,Mohammad Nabi,25913,RHB,OB,Right-handed,Right-arm off spin,sourced,wikipedia:Mohammad Nabi,2026-08-27
@@ -314,7 +314,7 @@ b2a79f17,B Laughlin,315623,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wi
 b2ae53f5,T Thushara,49677,LHB,LAP,Left-handed,Left-arm fast-medium,sourced,wikipedia:Thilan Thushara,2026-08-27
 b2b4f545,A Mhatre,1452455,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Ayush Mhatre,2026-08-27
 b2b50355,L Balaji,26829,RHB,RAP,Right-handed,Right-arm fast medium,sourced,wikipedia:Lakshmipathy Balaji,2026-08-27
-b410bd3d,S Lamichhane,960361,RHB,,Right-handed,Leg break,sourced,wikipedia:Sandeep Lamichhane,2026-08-27
+b410bd3d,S Lamichhane,960361,RHB,LB,Right-handed,Leg break,sourced,wikipedia:Sandeep Lamichhane,2026-08-27
 b483905d,Akash Singh,1175458,RHB,LAP,Right-handed,Left-arm medium-fast,sourced,"wikipedia:Akash Singh (cricketer, born 2002)",2026-08-27
 b4b99816,Shubman Gill,1070173,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Shubman Gill,2026-08-27
 b4f5c2d9,KL Nagarkoti,1070188,RHB,RAP,Right-handed,Right-arm fast,sourced,wikipedia:Kamlesh Nagarkoti,2026-08-27
@@ -327,7 +327,7 @@ b63ab531,LA Pomersbach,232284,LHB,OB,Left-handed,Right-arm off-break,sourced,wik
 b681e71e,GJ Maxwell,325026,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Glenn Maxwell,2026-08-27
 b720a5d6,DB Ravi Teja,237701,RHB,LB,Right-handed,Right-arm leg spin,sourced,wikipedia:Dwaraka Ravi Teja,2026-08-27
 b8527c3d,Rasikh Salam,1161489,RHB,RAP,Right-handed,Right-arm fast medium,sourced,wikipedia:Rasikh Salam,2026-08-27
-b8a55852,BB McCullum,37737,RHB,RAP,Right-handed,Right-arm medium Right-arm off break,sourced,wikipedia:Brendon McCullum,2026-08-27
+b8a55852,BB McCullum,37737,RHB,,Right-handed,Right-arm medium Right-arm off break,sourced,wikipedia:Brendon McCullum,2026-08-27
 b8d490fd,AJ Finch,5334,RHB,SLA,Right-handed,Slow left-arm orthodox,sourced,wikipedia:Aaron Finch,2026-08-27
 ba5e1069,R Ravindra,959767,LHB,SLA,Left-handed,Slow left-arm orthodox,sourced,wikipedia:Rachin Ravindra,2026-08-27
 ba607b88,V Kohli,253802,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Virat Kohli,2026-08-27
@@ -339,7 +339,7 @@ bbd41817,AD Russell,276298,RHB,RAP,Right-handed,Right-arm fast,sourced,wikipedia
 bcce309e,WPUJC Vaas,50804,LHB,LAP,Left-handed,Left-arm fast medium,sourced,wikipedia:Chaminda Vaas,2026-08-27
 bcf325d2,Dhruv Jurel,1175488,RHB,,Right-handed,,sourced,wikipedia:Dhruv Jurel,2026-08-27
 bd17b45f,STR Binny,27223,RHB,RAP,Right-handed,Right-arm medium-fast,sourced,wikipedia:Stuart Binny,2026-08-27
-bd77eb62,A Symonds,7702,RHB,,Right-handed,,sourced,wikipedia:Andrew Symonds,2026-08-27
+bd77eb62,A Symonds,7702,RHB,,Right-handed,"Right-arm medium, Right-arm off break",sourced,wikipedia:Andrew Symonds,2026-08-27
 be24ead0,Ramandeep Singh,1079470,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Ramandeep Singh (cricketer),2026-08-27
 c03c6200,DJG Sammy,53115,RHB,RAP,Right-handed,Right-arm medium-fast,sourced,wikipedia:Daren Sammy,2026-08-27
 c03e2850,M Vohra,532856,RHB,RAP,Right-handed,Right arm fast-medium,sourced,wikipedia:Manan Vohra,2026-08-27
@@ -383,7 +383,7 @@ d1c94b25,CK Langeveldt,45963,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,
 d2340a43,Anand Rajan,26797,RHB,RAP,Right-handed,Right-arm Medium,sourced,wikipedia:Anand Rajan,2026-08-27
 d2a6c0e6,EJG Morgan,24598,LHB,,Left-handed,| role = Middle-order batter,sourced,wikipedia:Eoin Morgan,2026-08-27
 d2a989fc,DS Kulkarni,277955,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Dhawal Kulkarni,2026-08-27
-d2c2b2d5,SR Tendulkar,35320,RHB,,Right-handed,,sourced,wikipedia:Sachin Tendulkar,2026-08-27
+d2c2b2d5,SR Tendulkar,35320,RHB,,Right-handed,"Right-arm leg break, Right-arm off break",sourced,wikipedia:Sachin Tendulkar,2026-08-27
 d45c29b1,Ashwani Kumar,1209126,LHB,LAP,Left-handed,Left arm medium-fast,sourced,wikipedia:Ashwani Kumar (cricketer),2026-08-27
 d4f9dbd4,CA Pujara,32540,RHB,LB,Right-handed,Right arm leg break,sourced,wikipedia:Cheteshwar Pujara,2026-08-27
 d5130a30,B Sai Sudharsan,1151288,LHB,LB,Left-handed,Right-arm leg break,sourced,wikipedia:Sai Sudharsan,2026-08-27
@@ -434,13 +434,13 @@ e9c7f0d0,Fazalhaq Farooqi,974175,RHB,LAP,Right-handed,Left-arm fast,sourced,wiki
 ea0cdc12,BAW Mendis,268739,RHB,OB,Right-handed,Right-arm off spin,sourced,wikipedia:Ajantha Mendis,2026-08-27
 eaa76d3c,C Green,1076713,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:Cameron Green,2026-08-27
 eade4650,DJ Mitchell,381743,RHB,RAP,Right-handed,Right-arm medium,sourced,wikipedia:Daryl Mitchell (New Zealand cricketer),2026-08-27
-edb3d4f8,KC Cariappa,777537,RHB,,Right-handed,Leg break,sourced,wikipedia:K. C. Cariappa (cricketer),2026-08-27
+edb3d4f8,KC Cariappa,777537,RHB,LB,Right-handed,Leg break,sourced,wikipedia:K. C. Cariappa (cricketer),2026-08-27
 ee1b6c27,N Thushara,955235,RHB,RAP,Right handed,Right arm medium-fast,sourced,wikipedia:Nuwan Thushara,2026-08-27
 ee7d0c82,GD McGrath,6565,RHB,RAP,Right-handed,Right arm fast-medium,sourced,wikipedia:Glenn McGrath,2026-08-27
 eef2536f,Avesh Khan,694211,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:Avesh Khan,2026-08-27
 ef5da05c,AG Murtaza,26490,LHB,SLA,Left-handed,Slow left-arm orthodox,sourced,wikipedia:Ali Murtaza,2026-08-27
 efc04be7,Noor Ahmad,1182529,RHB,SLW,Right-handed,Left-arm unorthodox spin,sourced,wikipedia:Noor Ahmad,2026-08-27
-f088b960,SN Khan,642525,RHB,,Right-handed,Legbreak,sourced,wikipedia:Sarfaraz Khan (cricketer),2026-08-27
+f088b960,SN Khan,642525,RHB,LB,Right-handed,Legbreak,sourced,wikipedia:Sarfaraz Khan (cricketer),2026-08-27
 f0f628c7,MM Patel,32965,RHB,RAP,Right-handed,Right arm fast medium,sourced,wikipedia:Munaf Patel,2026-08-27
 f19ccfad,Washington Sundar,719715,LHB,OB,Left-handed,Right-arm off break,sourced,wikipedia:Washington Sundar,2026-08-27
 f1f99156,TH David,892749,RHB,OB,Right-handed,Right-arm off break,sourced,wikipedia:Tim David,2026-08-27
@@ -452,7 +452,7 @@ f3cb53a1,MV Boucher,44111,RHB,RAP,Right-handed,Right arm medium,sourced,wikipedi
 f5180fe6,MG Johnson,6033,LHB,LAP,Left-handed,Left-arm fast,sourced,wikipedia:Mitchell Johnson,2026-08-27
 f5f18a18,S Randiv,50438,RHB,OB,Right-handed,Right-arm offbreak,sourced,wikipedia:Suraj Randiv,2026-08-27
 f62772e5,P Negi,530773,LHB,SLA,Left-handed,Slow left-arm orthodox,sourced,wikipedia:Pawan Negi,2026-08-27
-f6d8a7ab,K Kartikeya,1159843,RHB,SLW,Right-handed,"Slow Left arm Orthodox, Left arm Wrist spin",sourced,wikipedia:Kumar Kartikeya,2026-08-27
+f6d8a7ab,K Kartikeya,1159843,RHB,,Right-handed,"Slow Left arm Orthodox, Left arm Wrist spin",sourced,wikipedia:Kumar Kartikeya,2026-08-27
 f708a0bc,GB Hogg,5681,LHB,SLW,Left-handed,Left-arm wrist spin,sourced,wikipedia:Brad Hogg,2026-08-27
 f752db61,JL Pattinson,272465,LHB,RAP,Left-handed,Right-arm fast-medium,sourced,wikipedia:James Pattinson,2026-08-27
 f834dcfc,L Ngidi,542023,RHB,RAP,Right-handed,Right-arm fast-medium,sourced,wikipedia:Lungi Ngidi,2026-08-27

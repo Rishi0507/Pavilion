@@ -56,7 +56,6 @@ func TestNormaliseBowl(t *testing.T) {
 		{"Right-arm leg break", LegBreak},
 		{"Right-arm legbreak", LegBreak},
 		{"Right-arm leg spin", LegBreak},
-		{"Legbreak googly", BowlUnknown}, // arm unstated
 		{"Right-arm legbreak googly", LegBreak},
 
 		// Left-arm finger spin.
@@ -74,12 +73,12 @@ func TestNormaliseBowl(t *testing.T) {
 		// Refusals. Each of these is a case where a plausible guess exists and
 		// is deliberately not made.
 		{"", BowlUnknown},
-		{"Off break", BowlUnknown},        // almost certainly right-arm, but unstated
-		{"Leg break", BowlUnknown},        // likewise
 		{"Right-arm bowler", BowlUnknown}, // arm known, type not
 		{"Does not bowl", BowlUnknown},
 		{"None", BowlUnknown},
 		{"Slow", BowlUnknown},
+		{"Fast bowler", BowlUnknown},                 // pace carries no convention about the arm
+		{"Right-arm medium, off break", BowlUnknown}, // two families
 	}
 	for _, tc := range tests {
 		t.Run(tc.raw, func(t *testing.T) {
@@ -87,6 +86,76 @@ func TestNormaliseBowl(t *testing.T) {
 				t.Errorf("NormaliseBowl(%q) = %v, want %v", tc.raw, got, tc.want)
 			}
 		})
+	}
+}
+
+// TestArmIsReadFromSpinTerminology pins the vocabulary rules.
+//
+// Cricket's spin terms already name the arm, so reading it off them is applying
+// the terminology rather than guessing. "Leg break" is right-arm wrist spin by
+// definition; there is no left-arm leg break, because that delivery is called
+// unorthodox or a chinaman. "Off break" is right-arm finger spin, whose
+// left-arm equivalent is slow left-arm orthodox.
+func TestArmIsReadFromSpinTerminology(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want BowlClass
+	}{
+		// Leg break family: right-arm wrist spin, arm unstated.
+		{"bare leg break", "Leg break", LegBreak},
+		{"legbreak one word", "Legbreak", LegBreak},
+		{"legbreak googly", "Legbreak googly", LegBreak},
+		{"leg break googly spaced", "Leg break googly", LegBreak},
+		{"leg spin", "Leg spin", LegBreak},
+
+		// Off break family: right-arm finger spin, arm unstated.
+		{"bare off break", "Off break", OffBreak},
+		{"offbreak one word", "Offbreak", OffBreak},
+		{"off spin", "Off spin", OffBreak},
+		{"off-break hyphenated", "Off-break", OffBreak},
+
+		// Left-arm finger spin.
+		{"slow left-arm orthodox", "Slow left-arm orthodox", LeftArmOrthodox},
+		{"bare orthodox", "Orthodox", LeftArmOrthodox},
+
+		// Left-arm wrist spin, in each of its names.
+		{"left-arm unorthodox", "Left-arm unorthodox", LeftArmWrist},
+		{"slow left-arm wrist-spin", "Slow left-arm wrist-spin", LeftArmWrist},
+		{"bare chinaman", "Chinaman", LeftArmWrist},
+		{"unorthodox alone", "Unorthodox spin", LeftArmWrist},
+
+		// An explicitly stated arm overrides the term's default, because the
+		// source knows more than the convention does.
+		{"left-arm leg break is wrist spin", "Left-arm leg break", LeftArmWrist},
+		{"left-arm off break is orthodox", "Left-arm off break", LeftArmOrthodox},
+		{"right-arm wrist spin is a leg break", "Right-arm wrist spin", LegBreak},
+
+		// The specific rows this rule was written to resolve.
+		{"Rashid Khan", "Leg break googly", LegBreak},
+		{"Anil Kumble", "Leg break", LegBreak},
+		{"Rahul Sharma", "Legbreak googly", LegBreak},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := NormaliseBowl(tc.raw); got != tc.want {
+				t.Errorf("NormaliseBowl(%q) = %v, want %v", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestTwoFamiliesStayAmbiguous checks that a source naming two different spin
+// types is not silently collapsed to one of them.
+func TestTwoFamiliesStayAmbiguous(t *testing.T) {
+	for _, raw := range []string{
+		"Right-arm off break, leg break",
+		"Leg break, Off-break",
+		"Slow Left arm Orthodox, Left arm Wrist spin",
+	} {
+		if got := NormaliseBowl(raw); got != BowlUnknown {
+			t.Errorf("NormaliseBowl(%q) = %v, want BowlUnknown", raw, got)
+		}
 	}
 }
 

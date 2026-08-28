@@ -251,12 +251,60 @@ func (c *client) fetchWikitext(ctx context.Context, titles []string) (map[string
 var (
 	reRef      = regexp.MustCompile(`(?s)<ref[^>]*>.*?</ref>|<ref[^>]*/>`)
 	reComment  = regexp.MustCompile(`(?s)<!--.*?-->`)
-	reTemplate = regexp.MustCompile(`\{\{[^{}]*\}\}`)
+	reTemplate = regexp.MustCompile(`\{\{([^{}]*)\}\}`)
 	reLink     = regexp.MustCompile(`\[\[(?:[^\]|]*\|)?([^\]]*)\]\]`)
 	reTag      = regexp.MustCompile(`<[^>]+>`)
 	reBold     = regexp.MustCompile(`'{2,}`)
 	reSpace    = regexp.MustCompile(`\s+`)
 )
+
+// listTemplates wrap content that must be kept. An infobox field is routinely
+// written as {{ubl|Right-arm medium|Right-arm off break}}, and deleting the
+// template outright throws away the only value the field carries.
+var listTemplates = map[string]bool{
+	"ubl":                  true,
+	"unbulleted list":      true,
+	"plainlist":            true,
+	"plain list":           true,
+	"flatlist":             true,
+	"hlist":                true,
+	"nowrap":               true,
+	"nobr":                 true,
+	"br separated entries": true,
+}
+
+// expandTemplates unwraps formatting templates and drops the rest.
+//
+// Templates are resolved innermost first so that nesting a wrapper inside
+// another still yields its content.
+func expandTemplates(s string) string {
+	for range 8 {
+		out := reTemplate.ReplaceAllStringFunc(s, func(m string) string {
+			parts := strings.Split(m[2:len(m)-2], "|")
+			if !listTemplates[strings.ToLower(strings.TrimSpace(parts[0]))] {
+				return " "
+			}
+			var args []string
+			for _, p := range parts[1:] {
+				p = strings.TrimSpace(p)
+				if p == "" {
+					continue
+				}
+				// Drop named parameters such as class=nowrap, keeping values.
+				if i := strings.IndexByte(p, '='); i > 0 && !strings.ContainsAny(p[:i], " ,[]()") {
+					continue
+				}
+				args = append(args, p)
+			}
+			return strings.Join(args, ", ")
+		})
+		if out == s {
+			break
+		}
+		s = out
+	}
+	return s
+}
 
 // infoboxField pulls one named field out of an infobox.
 func infoboxField(wikitext, field string) string {
@@ -272,15 +320,17 @@ func infoboxField(wikitext, field string) string {
 }
 
 // cleanWikitext strips markup, leaving readable plain text.
+//
+// Wikilinks are resolved before templates are expanded, because a piped link
+// such as [[Off spin|off break]] contains the same separator that delimits
+// template arguments; splitting on it first would cut the link in half.
 func cleanWikitext(s string) string {
 	s = reComment.ReplaceAllString(s, "")
 	s = reRef.ReplaceAllString(s, "")
-	// Templates may nest one level in practice; two passes covers it.
-	s = reTemplate.ReplaceAllString(s, " ")
-	s = reTemplate.ReplaceAllString(s, " ")
 	s = reLink.ReplaceAllString(s, "$1")
+	s = expandTemplates(s)
 	s = reTag.ReplaceAllString(s, " ")
 	s = reBold.ReplaceAllString(s, "")
 	s = reSpace.ReplaceAllString(s, " ")
-	return strings.TrimSpace(s)
+	return strings.TrimSpace(strings.Trim(strings.TrimSpace(s), ","))
 }
