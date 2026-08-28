@@ -153,6 +153,11 @@ function render(s) {
   state.decisions = s.decisions;
   state.half = s.half;
 
+  // A finished run has no decision to offer and no innings in progress, so the
+  // play screen has nothing to draw. Rendering it anyway is what produced a
+  // crash on the very last over of the game, where it was most visible.
+  if (s.half === 'finished') return;
+
   el('sb-score').textContent = s.score;
   el('sb-wkts').textContent = s.wickets;
   el('over-no').textContent = `OVER ${Math.min(s.over + 1, 20)}`;
@@ -188,9 +193,10 @@ function renderBowlers(s) {
   const wrap = el('bowlers');
   wrap.replaceChildren();
 
-  s.overs_bowled.forEach((used, i) => {
+  const legalIDs = s.legal_bowlers || [];
+  (s.overs_bowled || []).forEach((used, i) => {
     const b = state.puzzle.attack[i];
-    const legal = s.legal_bowlers.includes(i);
+    const legal = legalIDs.includes(i);
 
     const card = document.createElement('button');
     card.className = 'bowler';
@@ -264,6 +270,7 @@ async function playOver(half, body) {
       await handover(r);
     }
     if (r.state.half === 'finished') {
+      state.half = 'finished';
       await finish();
     }
   } catch (err) {

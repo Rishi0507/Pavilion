@@ -256,6 +256,14 @@ type StateView struct {
 
 func (s *Server) stateOf(run *session.Run) StateView {
 	st := run.State
+	// Slices are built explicitly rather than left nil, because a JSON API that
+	// returns null where the client expects an array is a trap: every consumer
+	// has to remember the special case, and the one that forgets crashes at
+	// exactly the moment the innings ends.
+	legal := st.LegalBowlers()
+	if legal == nil {
+		legal = []int{}
+	}
 	v := StateView{
 		Half:         run.Half.String(),
 		Over:         int(st.Over),
@@ -264,7 +272,7 @@ func (s *Server) stateOf(run *session.Run) StateView {
 		Target:       int(st.Puzzle.Target),
 		RunsNeeded:   st.RunsNeeded(),
 		BallsLeft:    st.BallsLeft(),
-		LegalBowlers: st.LegalBowlers(),
+		LegalBowlers: legal,
 		AttacksLeft:  st.AttacksLeft(),
 		Done:         st.Done,
 		Decisions:    run.Decisions,
@@ -276,6 +284,7 @@ func (s *Server) stateOf(run *session.Run) StateView {
 		v.StrikerBalls = int(st.BallsFaced[st.Striker])
 		v.NonStriker = st.Puzzle.Batting[st.NonStriker].Name
 	}
+	v.OversBowled = make([]int, 0, len(st.OversBowled))
 	for _, n := range st.OversBowled {
 		v.OversBowled = append(v.OversBowled, int(n))
 	}

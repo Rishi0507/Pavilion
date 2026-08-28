@@ -180,9 +180,30 @@ func TestFullRun(t *testing.T) {
 			t.Errorf("over %d has no grade", r.Over)
 		}
 
+		// A JSON API that returns null where the client expects an array is a
+		// trap: every consumer has to remember the special case, and the one
+		// that forgets crashes at the moment the innings ends, which is exactly
+		// what happened. The arrays are always present, empty when there is
+		// nothing in them.
+		if r.State.LegalBowlers == nil {
+			t.Fatalf("over %d (%s): legal_bowlers is null; it must be an array",
+				r.Over, r.State.Half)
+		}
+		if r.State.OversBowled == nil {
+			t.Fatalf("over %d: overs_bowled is null; it must be an array", r.Over)
+		}
+
 		state = r.State
 		decisions = state.Decisions
 		overs++
+	}
+
+	// The finished state is the one a client is most likely to mishandle,
+	// because it is reached once per game and only at the very end. A chase
+	// that ends early leaves bowlers with overs unbowled, so the list may be
+	// non-empty; what matters is that it is never null.
+	if state.LegalBowlers == nil {
+		t.Error("a finished run reports legal_bowlers as null")
 	}
 
 	if state.Half != "finished" {
@@ -216,6 +237,51 @@ func TestFullRun(t *testing.T) {
 // TestServerIsAuthoritative covers the rules that stop a client from writing
 // its own result: a forged token, a replayed decision, and a move belonging to
 // the other half.
+// TestFullLengthInningsIsNotNull covers the case that actually broke in play:
+// an innings that goes the full twenty overs leaves no bowler with an over
+// left, so the list of legal bowlers is empty. Built by appending to a nil
+// slice it serialised as null, and the client dereferenced it on the last ball
+// of the game.
+func TestFullLengthInningsIsNotNull(t *testing.T) {
+	ts, srv := harness(t)
+
+	var start StartResponse
+	if code := do(t, ts, "POST", "/api/v1/run", "", map[string]any{}, &start); code != 200 {
+		t.Fatalf("start: status %d", code)
+	}
+
+	run, err := srv.Sessions.Get(start.RunID, start.Token)
+	if err != nil {
+		t.Fatalf("get run: %v", err)
+	}
+
+	// Drive the state directly to the end of a full innings.
+	for i := range run.State.OversBowled {
+		run.State.OversBowled[i] = sim.MaxOversPerBowler
+	}
+	run.State.Over = sim.MaxOvers
+	run.State.LegalBalls = sim.MaxOvers * 6
+
+	view := srv.stateOf(run)
+	if view.LegalBowlers == nil {
+		t.Error("legal_bowlers is null after a full-length innings; it must be an empty array")
+	}
+	if len(view.LegalBowlers) != 0 {
+		t.Errorf("legal_bowlers = %v after every over is bowled, want empty", view.LegalBowlers)
+	}
+
+	raw, err := json.Marshal(view)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(raw, []byte(`"legal_bowlers":null`)) {
+		t.Errorf("legal_bowlers serialises as null: %s", raw)
+	}
+	if bytes.Contains(raw, []byte(`"overs_bowled":null`)) {
+		t.Errorf("overs_bowled serialises as null: %s", raw)
+	}
+}
+
 func TestServerIsAuthoritative(t *testing.T) {
 	ts, _ := harness(t)
 
