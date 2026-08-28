@@ -643,4 +643,53 @@ func (b *builder) attributeCoverage() {
 	if miss := len(bowlers) - classes; miss > 0 {
 		b.q.warn("%d of %d eligible bowlers have no bowling class", miss, len(bowlers))
 	}
+
+	b.dealablePool()
+}
+
+// dealablePool records the pool the game actually draws from, and every player
+// excluded from it.
+func (b *builder) dealablePool() {
+	batKnown := func(id string) bool { _, ok := b.attrs.BatOf(id); return ok }
+	bowlKnown := func(id string) bool { _, ok := b.attrs.BowlOf(id); return ok }
+
+	players, bowlers, batters, excluded := b.st.Dealable(corpus.DefaultEligibility, batKnown, bowlKnown)
+	b.q.Eligible.Dealable = len(players)
+	b.q.Eligible.DealableBowlers = len(bowlers)
+	b.q.Eligible.DealableBatters = len(batters)
+
+	vols := b.st.Volumes()
+	for _, p := range excluded {
+		pl := b.st.Players[p]
+		v := vols[p]
+
+		var missing []string
+		if _, ok := b.attrs.BatOf(pl.CricsheetID); !ok {
+			missing = append(missing, "batting hand")
+		}
+		if v.BallsBowled >= corpus.DefaultEligibility.MinBallsBowled {
+			if _, ok := b.attrs.BowlOf(pl.CricsheetID); !ok {
+				missing = append(missing, "bowling class")
+			}
+		}
+		b.q.Eligible.Excluded = append(b.q.Eligible.Excluded, ExcludedPlayer{
+			CricsheetID: pl.CricsheetID,
+			Name:        pl.Name,
+			BallsBowled: v.BallsBowled,
+			BallsFaced:  v.BallsFaced,
+			LastSeason:  int(v.LastSeason),
+			Missing:     strings.Join(missing, ", "),
+		})
+	}
+	sort.Slice(b.q.Eligible.Excluded, func(i, j int) bool {
+		a, c := b.q.Eligible.Excluded[i], b.q.Eligible.Excluded[j]
+		if a.BallsBowled != c.BallsBowled {
+			return a.BallsBowled > c.BallsBowled
+		}
+		return a.CricsheetID < c.CricsheetID
+	})
+
+	if n := len(b.q.Eligible.Excluded); n > 0 {
+		b.q.warn("%d eligible players are excluded from the dealable pool for want of attributes", n)
+	}
 }

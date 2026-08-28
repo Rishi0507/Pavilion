@@ -133,3 +133,47 @@ func (s *Store) Eligible(e Eligibility) (players, bowlers, batters []PlayerID) {
 	}
 	return players, bowlers, batters
 }
+
+// Dealable narrows the eligible set to players the game can actually put in
+// front of someone.
+//
+// Eligibility is about sample size: enough deliveries for a player's rates to
+// mean something. Dealability adds the second requirement, that the attributes
+// the matchup model needs are known. A bowler whose type nobody recorded cannot
+// be modelled against a left-hander, and a player with no Wikipedia article is
+// almost by definition not one a daily game about recognisable cricketers
+// should be dealing.
+//
+// The two predicates are passed in rather than looked up here so that this
+// package keeps no dependency on the attribute table.
+func (s *Store) Dealable(e Eligibility, batKnown, bowlKnown func(cricsheetID string) bool) (players, bowlers, batters, excluded []PlayerID) {
+	eligible, eligibleBowlers, eligibleBatters := s.Eligible(e)
+
+	isBowler := make(map[PlayerID]bool, len(eligibleBowlers))
+	for _, p := range eligibleBowlers {
+		isBowler[p] = true
+	}
+	isBatter := make(map[PlayerID]bool, len(eligibleBatters))
+	for _, p := range eligibleBatters {
+		isBatter[p] = true
+	}
+
+	for _, p := range eligible {
+		id := s.Players[p].CricsheetID
+		canBowl := isBowler[p] && bowlKnown(id)
+		canBat := isBatter[p] && batKnown(id)
+		switch {
+		case canBowl || canBat:
+			players = append(players, p)
+			if canBowl {
+				bowlers = append(bowlers, p)
+			}
+			if canBat {
+				batters = append(batters, p)
+			}
+		default:
+			excluded = append(excluded, p)
+		}
+	}
+	return players, bowlers, batters, excluded
+}

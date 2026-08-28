@@ -183,3 +183,51 @@ func TestEligibleSelectsRoles(t *testing.T) {
 		t.Errorf("batters = %v, want [0]", batters)
 	}
 }
+
+// TestDealableExcludesUnresolvedPlayers checks the second gate on the player
+// pool: enough deliveries is not sufficient, the attributes must be known too.
+func TestDealableExcludesUnresolvedPlayers(t *testing.T) {
+	s := volumeStore(false)
+	rule := Eligibility{MinBallsBowled: 1, MinBallsFaced: 1}
+
+	all := func(string) bool { return true }
+	none := func(string) bool { return false }
+
+	t.Run("everything known keeps the whole eligible set", func(t *testing.T) {
+		players, bowlers, batters, excluded := s.Dealable(rule, all, all)
+		if len(players) != 2 || len(bowlers) != 1 || len(batters) != 1 || len(excluded) != 0 {
+			t.Errorf("got players=%d bowlers=%d batters=%d excluded=%d, want 2/1/1/0",
+				len(players), len(bowlers), len(batters), len(excluded))
+		}
+	})
+
+	t.Run("an unknown bowling class drops the bowler", func(t *testing.T) {
+		players, bowlers, _, excluded := s.Dealable(rule, all, none)
+		if len(bowlers) != 0 {
+			t.Errorf("bowlers = %d, want 0", len(bowlers))
+		}
+		// The bowler faced nothing, so losing his class removes him entirely.
+		if len(excluded) != 1 || excluded[0] != 2 {
+			t.Errorf("excluded = %v, want [2]", excluded)
+		}
+		if len(players) != 1 {
+			t.Errorf("players = %d, want 1", len(players))
+		}
+	})
+
+	t.Run("nothing known excludes everyone", func(t *testing.T) {
+		players, _, _, excluded := s.Dealable(rule, none, none)
+		if len(players) != 0 || len(excluded) != 2 {
+			t.Errorf("players = %d, excluded = %d, want 0 and 2", len(players), len(excluded))
+		}
+	})
+
+	t.Run("an allrounder keeps the role that resolved", func(t *testing.T) {
+		// Batting known, bowling not: the batter survives as a batter only.
+		players, bowlers, batters, _ := s.Dealable(rule, all, none)
+		if len(batters) != 1 || len(bowlers) != 0 || len(players) != 1 {
+			t.Errorf("got players=%d bowlers=%d batters=%d, want 1/0/1",
+				len(players), len(bowlers), len(batters))
+		}
+	})
+}

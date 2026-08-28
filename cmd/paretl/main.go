@@ -21,8 +21,13 @@ import (
 	"manhattan/internal/corpus"
 )
 
-const sourceLicense = "Open Data Commons Attribution License 1.0 " +
-	"(http://opendatacommons.org/licenses/by/1.0/), Cricsheet, by Stephen Rushe"
+// sourceLicense credits both upstream sources. They carry different terms, and
+// the difference is load-bearing: Cricsheet is attribution-only, while the
+// Wikipedia-derived attribute table is share-alike.
+const sourceLicense = "Ball-by-ball data: Cricsheet (cricsheet.org), by Stephen Rushe, " +
+	"under ODC-BY 1.0 (http://opendatacommons.org/licenses/by/1.0/). " +
+	"Player attributes: English Wikipedia, under CC BY-SA 4.0 " +
+	"(https://creativecommons.org/licenses/by-sa/4.0/)."
 
 func main() {
 	var (

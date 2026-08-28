@@ -8,7 +8,7 @@ of high-intent overs.
 The game ships as **Par**. `Manhattan` is the project and repository name, after
 the per-over bar chart that gives the game its visual language.
 
-**Status: milestone 1 of 11 (ETL).** Not yet playable.
+**Status: milestone 2 of 11.** Not yet playable.
 
 ---
 
@@ -82,7 +82,21 @@ models may be distributed under whatever terms we choose, provided Cricsheet is
 attributed. Neither ODbL nor CC BY-SA applies, and there is no copyleft
 obligation on the corpus, the trained models, or the game.
 
-Attribution appears in the application footer and in every generated artifact.
+## Attribution
+
+Both sources are credited in the application footer and in every generated
+artifact. The required footer text is:
+
+> Ball-by-ball data from **Cricsheet** (cricsheet.org), by Stephen Rushe, used
+> under ODC-BY 1.0. Player attributes from **Wikipedia**, used under CC BY-SA 4.0.
+> An unofficial fan project, not affiliated with the BCCI or the IPL.
+
+Player attributes come from English Wikipedia and are therefore **CC BY-SA 4.0**,
+which is share-alike. This matters and differs from the Cricsheet position: the
+attribute table is a derived work of Wikipedia text and carries a share-alike
+obligation, whereas the ball-by-ball corpus does not. The two are kept in
+separate files for exactly this reason, so the obligation stays scoped to
+`data/attributes/` rather than spreading to the corpus or the models.
 
 ## Legal
 

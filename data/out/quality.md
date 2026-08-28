@@ -1,7 +1,7 @@
 # Manhattan data quality report
 
-Generated 2026-08-27T14:57:12Z from `data\raw\ipl_json`.
-Source licence: Open Data Commons Attribution License 1.0 (http://opendatacommons.org/licenses/by/1.0/), Cricsheet, by Stephen Rushe
+Generated 2026-08-28T04:41:02Z from `data\raw\ipl_json`.
+Source licence: Ball-by-ball data: Cricsheet (cricsheet.org), by Stephen Rushe, under ODC-BY 1.0 (http://opendatacommons.org/licenses/by/1.0/). Player attributes: English Wikipedia, under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Corpus
 
@@ -28,7 +28,7 @@ Source licence: Open Data Commons Attribution License 1.0 (http://opendatacommon
 | match.toss_winner | 100.00% |
 | match.venue | 100.00% |
 | player.batting_hand | 97.93% |
-| player.bowling_class | 95.13% |
+| player.bowling_class | 96.28% |
 | player.cricinfo_id | 100.00% |
 
 ## Player attributes
@@ -43,9 +43,35 @@ actually deal, not the whole corpus.
 | Eligible players (>= 200 balls faced, or >= 120 bowled) | 483 |
 | Eligible bowlers | 349 |
 | Batting handedness known | 473 |
-| Bowling class known | 332 |
+| Bowling class known | 336 |
 | Attribute rows sourced | 473 |
 | Attribute rows set by hand | 0 |
+| **Dealable players** | **471** |
+| Dealable as a bowler | 336 |
+| Dealable as a batter | 225 |
+
+### Excluded from the dealable pool (12)
+
+These players clear the volume threshold but have no resolved
+attributes, so the game will not deal them. A player with no
+Wikipedia article is generally not one a daily game about
+recognisable cricketers should be putting on screen; a high-volume
+name here is worth resolving by hand in `manual.csv` instead.
+
+| Player | Identifier | Bowled | Faced | Last season | Missing |
+|---|---|---:|---:|---:|---|
+| P Awana | `1a0c3177` | 747 | 14 | 2014 | bowling class |
+| DS Rathi | `13fc5c6d` | 546 | 8 | 2026 | batting hand, bowling class |
+| V Nigam | `5ffc0565` | 288 | 71 | 2026 | batting hand, bowling class |
+| K Kartikeya | `f6d8a7ab` | 282 | 17 | 2025 | bowling class |
+| Brijesh Sharma | `133bbd61` | 273 | 4 | 2026 | batting hand, bowling class |
+| Shivang Kumar | `7b44eb3e` | 234 | 45 | 2026 | batting hand, bowling class |
+| Yash Raj Punja | `02dfebbe` | 180 | 0 | 2026 | batting hand, bowling class |
+| PP Hinge | `ece7b6b3` | 156 | 9 | 2026 | batting hand, bowling class |
+| DP Vijaykumar | `acd4f5dc` | 152 | 1 | 2008 | batting hand, bowling class |
+| Ashok Sharma | `50c09020` | 126 | 4 | 2026 | batting hand, bowling class |
+| Naman Dhir | `fffa744b` | 52 | 432 | 2026 | batting hand |
+| Priyansh Arya | `b5797845` | 0 | 435 | 2026 | batting hand |
 
 ## Entity resolution
 
@@ -99,10 +125,11 @@ Miscounted overs (an umpire signalled five or seven balls; the
 - 501202.json innings 0 over 5: 5 legal balls
 - 501255.json innings 1 over 9: 5 legal balls
 
-## Warnings (2)
+## Warnings (3)
 
 - 10 of 483 eligible players have no batting handedness
-- 17 of 349 eligible bowlers have no bowling class
+- 13 of 349 eligible bowlers have no bowling class
+- 12 eligible players are excluded from the dealable pool for want of attributes
 
 ## Skipped matches (6)
 

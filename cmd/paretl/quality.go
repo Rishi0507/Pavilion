@@ -81,6 +81,13 @@ type Quality struct {
 		Sourced           int `json:"attr_rows_sourced"`
 		Manual            int `json:"attr_rows_manual"`
 		InferredInTable   int `json:"attr_rows_inferred"`
+
+		// Dealable is the eligible set minus players whose attributes could
+		// not be resolved. It is the pool the game actually draws from.
+		Dealable        int              `json:"dealable_players"`
+		DealableBowlers int              `json:"dealable_bowlers"`
+		DealableBatters int              `json:"dealable_batters"`
+		Excluded        []ExcludedPlayer `json:"excluded"`
 	} `json:"eligible"`
 
 	// Coverage is the percentage of records carrying each attribute. The two
@@ -96,6 +103,21 @@ type Quality struct {
 type AmbiguousName struct {
 	Name string   `json:"name"`
 	IDs  []string `json:"ids"`
+}
+
+// ExcludedPlayer is an eligible player the game will not deal, because the
+// attributes the matchup model needs could not be resolved for them.
+//
+// These are recorded rather than silently dropped: an exclusion is a decision,
+// and a high-volume player appearing here is a signal that something needs
+// fixing by hand rather than a fact to accept.
+type ExcludedPlayer struct {
+	CricsheetID string `json:"cricsheet_id"`
+	Name        string `json:"name"`
+	BallsBowled int    `json:"balls_bowled"`
+	BallsFaced  int    `json:"balls_faced"`
+	LastSeason  int    `json:"last_season"`
+	Missing     string `json:"missing"`
 }
 
 // AliasRecord is one person recorded under several display names.
@@ -176,7 +198,28 @@ func (q *Quality) WriteMarkdown(path string) error {
 	p("| Bowling class known | %d |", q.Eligible.BowlingClassKnown)
 	p("| Attribute rows sourced | %d |", q.Eligible.Sourced)
 	p("| Attribute rows set by hand | %d |", q.Eligible.Manual)
+	p("| **Dealable players** | **%d** |", q.Eligible.Dealable)
+	p("| Dealable as a bowler | %d |", q.Eligible.DealableBowlers)
+	p("| Dealable as a batter | %d |", q.Eligible.DealableBatters)
 	p("")
+
+	if len(q.Eligible.Excluded) > 0 {
+		p("### Excluded from the dealable pool (%d)", len(q.Eligible.Excluded))
+		p("")
+		p("These players clear the volume threshold but have no resolved")
+		p("attributes, so the game will not deal them. A player with no")
+		p("Wikipedia article is generally not one a daily game about")
+		p("recognisable cricketers should be putting on screen; a high-volume")
+		p("name here is worth resolving by hand in `manual.csv` instead.")
+		p("")
+		p("| Player | Identifier | Bowled | Faced | Last season | Missing |")
+		p("|---|---|---:|---:|---:|---|")
+		for _, e := range q.Eligible.Excluded {
+			p("| %s | `%s` | %d | %d | %d | %s |",
+				e.Name, e.CricsheetID, e.BallsBowled, e.BallsFaced, e.LastSeason, e.Missing)
+		}
+		p("")
+	}
 
 	p("## Entity resolution")
 	p("")
