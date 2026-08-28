@@ -56,7 +56,7 @@ data/models/winprob.txt: $(OUT)/wp_train.csv ml/train_wp.py
 
 ## puzzles: generate and validate the daily puzzle queue
 puzzles: data/models/winprob.txt
-	$(GO) run ./cmd/parpuzzle -days 7
+	$(GO) run ./cmd/parpuzzle -days 7 -candidates 12
 
 ## sweep: print how targets and attacks behave, for calibrating the criteria
 sweep:

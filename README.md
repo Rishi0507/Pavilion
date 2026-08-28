@@ -228,6 +228,18 @@ wrong, each chosen before anything had been measured:
 The sweep tool is kept rather than thrown away: a search that rejects everything
 is useless without a way to see what it was rejecting.
 
+With all three corrected, candidates land in the band routinely and the
+remaining rejections are on the quality filter alone, which is what a quality
+filter is for. A queued day looks like this:
+
+    2026-08-29  target 202 at Eden Gardens
+      attack: M Theekshana, Sakib Hussain, J Little, AK Markram, Yash Thakur
+      reference play: defends 36.5%, chases 44.9%, decision spread 0.0193
+
+Note the attack: two front-line bowlers, a left-arm quick, and Markram's
+part-time off spin. Finding four overs for the fifth bowler is the problem the
+day is actually setting.
+
 ## Milestones 5 to 8: the game
 
     Par 2026-08-28 · target 195
