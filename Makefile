@@ -42,6 +42,10 @@ baseline:
 test:
 	$(GO) test ./...
 
+## bench: benchmark the aggregation and graph hot paths
+bench:
+	$(GO) test -bench=. -benchtime=200x -run='^$$' ./internal/corpus/ ./internal/graph/
+
 ## lint: vet and formatting check
 lint:
 	$(GO) vet ./...

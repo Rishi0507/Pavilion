@@ -20,6 +20,12 @@ make etl     # build the binary corpus and the data quality report
 make attrs   # resolve batting handedness and bowling type
 make check   # fail if data quality has regressed
 make test    # run the test suite
+
+# ask the corpus questions
+go run ./cmd/parquery dist -bowler "JJ Bumrah" -phase death -vs-hand LHB
+go run ./cmd/parquery matchup -batter "V Kohli" -bowler "JJ Bumrah"
+go run ./cmd/parquery worst -batter "N Pooran"
+go run ./cmd/parquery graph
 ```
 
 On Windows without `make` on PATH, use `mingw32-make`, or run the underlying
@@ -166,9 +172,7 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 ## Milestones
 
 1. **ETL** — Cricsheet to binary corpus, data quality report, entity resolution ✅
-2. Corpus and CSR matchup graph, sub-10ms aggregation
-   - player attributes sourced, quality gate wired ✅
-   - CSR matchup graph and the query CLI — in progress
+2. **Corpus and CSR matchup graph, sub-10ms aggregation** ✅
 3. Hierarchical shrinkage on player rates
 4. Ball outcome model, calibrated
 5. The simulator: deterministic, pure, tested
@@ -179,6 +183,44 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 9. Daily pipeline
 10. Design pass
 11. Leaderboards, stats, sharing, streaks
+
+## Milestone 2 findings
+
+Aggregation, the matchup graph, and `parquery`. Measured on the full corpus:
+
+| Operation | |
+|---|---:|
+| Filtered aggregation over 295,215 deliveries | **1.17 ms** |
+| The same with an attribute mask | 1.56 ms |
+| Matchup lookup, CSR binary search | **34.5 ns** |
+| Corpus load at boot | 14 ms |
+| Graph build at boot | 59 ms |
+
+The milestone asked for a sub-10ms answer to "Bumrah's death-overs distribution
+against left-handers". It runs in 1.17 ms, scanning every delivery with no
+index. That is the whole argument for keeping the corpus in memory rather than
+in a database.
+
+**The matchup effects are real and computed, not asserted.** Ashwin's off-spin
+turns away from a left-hander, which is the harder matchup for the batter, and
+the corpus shows exactly that:
+
+| R Ashwin | Economy | Strike rate against |
+|---|---:|---:|
+| vs left-handers | 6.76 | 108.7 |
+| vs right-handers | 7.68 | 121.5 |
+
+Phase behaviour comes out with the right shape too: economy 8.09 / 7.95 / 10.06
+across powerplay, middle and death, with dot rate falling monotonically
+(44.2% → 29.0% → 22.9%) and boundary rate U-shaped (20.4% → 14.2% → 20.6%) as
+field restrictions give way to consolidation and then to all-out attack.
+
+The graph holds **31,325 matchup edges** over 964 player nodes, in both
+directions, built once at boot and never mutated.
+
+Attribute coverage over the 483 eligible players: **97.9% batting hand, 96.3%
+bowling class**, from 12 HTTP requests. 471 players are dealable; the 12
+exclusions are listed in the quality report.
 
 ## Milestone 1 findings
 
