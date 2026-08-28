@@ -171,7 +171,13 @@ func (s *Server) puzzleFor(date string) (*sim.Puzzle, sim.DailyKey, bool, error)
 	// No validated puzzle for this date. One is generated so the server still
 	// works, but it is flagged, because an unchecked day can easily be one
 	// where everybody wins.
-	p, err := s.Engine.BuildPuzzle(date, key, 195)
+	//
+	// The target is derived from the day's key rather than fixed, so that
+	// consecutive unvalidated days at least differ from one another. It is
+	// still a guess: only the Monte Carlo can say whether a score is a contest
+	// against this particular attack.
+	target := uint16(170 + int(key[11])%50)
+	p, err := s.Engine.BuildPuzzle(date, key, target)
 	return p, key, false, err
 }
 
