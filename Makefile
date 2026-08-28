@@ -8,9 +8,9 @@ RAW     := data/raw
 OUT     := data/out
 MATCHES := $(RAW)/ipl_json
 
-.PHONY: all data etl attrs rates features model check baseline bench test lint clean
+.PHONY: all data etl attrs rates features model winprob puzzles sweep play check baseline bench test lint clean
 
-all: etl attrs rates features model test
+all: etl attrs rates features model winprob test
 
 ## data: download the Cricsheet IPL archive and the people register
 data:
@@ -48,6 +48,24 @@ model: data/models/outcome.txt
 data/models/outcome.txt: $(OUT)/train.csv ml/train.py ml/pyproject.toml
 	cd ml && uv run python train.py
 
+## winprob: train the win probability model
+winprob: data/models/winprob.txt
+
+data/models/winprob.txt: $(OUT)/wp_train.csv ml/train_wp.py
+	cd ml && uv run python train_wp.py
+
+## puzzles: generate and validate the daily puzzle queue
+puzzles: data/models/winprob.txt
+	$(GO) run ./cmd/parpuzzle -days 7 -candidates 12
+
+## sweep: print how targets and attacks behave, for calibrating the criteria
+sweep:
+	$(GO) run ./cmd/parpuzzle -sweep -games 400
+
+## play: play today's puzzle at a terminal
+play:
+	$(GO) run ./cmd/parplay
+
 ## check: rebuild the report and fail on any data quality regression
 check:
 	$(GO) run ./cmd/paretl -check
@@ -71,4 +89,4 @@ lint:
 
 ## clean: remove generated artifacts, keeping raw downloads
 clean:
-	rm -f $(OUT)/corpus.bin $(OUT)/rates.bin $(OUT)/train.csv $(OUT)/test.csv
+	rm -f $(OUT)/corpus.bin $(OUT)/rates.bin $(OUT)/train.csv $(OUT)/test.csv $(OUT)/wp_train.csv $(OUT)/wp_test.csv

@@ -8,7 +8,7 @@ of high-intent overs.
 The game ships as **Par**. `Manhattan` is the project and repository name, after
 the per-over bar chart that gives the game its visual language.
 
-**Status: milestone 4 of 11.** Not yet playable.
+**Status: milestone 9 of 11. Playable.** `make play`
 
 ---
 
@@ -178,14 +178,178 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 2. **Corpus and CSR matchup graph, sub-10ms aggregation** ✅
 3. **Hierarchical shrinkage on player rates** ✅
 4. **Ball outcome model, calibrated** ✅
-5. The simulator: deterministic, pure, tested
-6. **Defend half, playable and ugly** — the gate: if choosing the 17th over is
-   not fun in isolation, nothing later fixes it
-7. Win probability model and the share grid
-8. Chase half
-9. Daily pipeline
+5. **The simulator: deterministic, pure, tested** ✅
+6. **Defend half, playable and ugly** ✅ — the gate; see findings
+7. **Win probability model and the share grid** ✅
+8. **Chase half** ✅
+9. **Daily pipeline** ✅
 10. Design pass
 11. Leaderboards, stats, sharing, streaks
+
+## Milestone 9: the daily pipeline
+
+Candidates are Monte Carloed offline against a reference policy, and only
+survivors reach the queue. Nothing is generated at request time, because a
+puzzle generated on demand cannot be checked, and an unchecked puzzle is how a
+day arrives where everyone defends comfortably and the comparison means nothing.
+
+The whole tuple is validated, not the target. The attack, the chasing side and
+the ground are fixed before the simulation runs, and the decision spread is
+measured over the attack actually dealt.
+
+**The band is satisfiable but narrow, exactly as feared.** A sweep across four
+attacks and six targets shows the two halves moving in opposition:
+
+| attack | target | defend | chase | spread |
+|---:|---:|---:|---:|---:|
+| 0 | 180 | 0.247 | 0.550 | 0.0202 |
+| 0 | **195** | **0.397** | **0.470** | 0.0221 |
+| 0 | 210 | 0.557 | 0.297 | 0.0122 |
+
+That was the objection raised before any code was written, and it is now
+measured rather than guessed. It also made three of the pipeline's own numbers
+wrong, each chosen before anything had been measured:
+
+- **The decision-spread threshold was invented.** It was set to 0.030; nothing
+  in the entire sweep exceeds 0.023, so every candidate was rejected, including
+  the well-balanced ones. It is now 0.018, calibrated against the observed range
+  of 0.006 to 0.023.
+- **The reference chase policy was the worst of three already measured.** It
+  chased 40.7% where simply spending the attacking budget managed 46.3%. Using
+  it as the yardstick made every chase look harder than it is, which pushed the
+  target search toward scores only the defending half could win, and starved the
+  queue.
+- **The target was sampled rather than solved.** For a fixed tuple the defend
+  rate rises with the score and the chase rate falls, so their difference is
+  monotone and the crossing point can be bisected. Solving instead for an even
+  *defence* puts the target near 210, where defending is a coin toss but chasing
+  wins barely 30%. Equalising the two lands inside the band by construction.
+
+The sweep tool is kept rather than thrown away: a search that rejects everything
+is useless without a way to see what it was rejecting.
+
+With all three corrected, candidates land in the band routinely and the
+remaining rejections are on the quality filter alone, which is what a quality
+filter is for. A queued day looks like this:
+
+    2026-08-29  target 202 at Eden Gardens
+      attack: M Theekshana, Sakib Hussain, J Little, AK Markram, Yash Thakur
+      reference play: defends 36.5%, chases 44.9%, decision spread 0.0193
+
+Note the attack: two front-line bowlers, a left-arm quick, and Markram's
+part-time off spin. Finding four overs for the fifth bowler is the problem the
+day is actually setting.
+
+## Milestones 5 to 8: the game
+
+    Par 2026-08-28 · target 195
+    Defend  🟩🟥🟥🟨🟥🟥🟥🟥🟥🟨🟨🟨🟨🟨🟨🟥  lost by 9 wickets
+    Chase   🟨🟨🟩🟥🟩🟩🟩🟨🟨🟨🟥🟥🟥🟥🟨🟥🟨🟨🟨🟥  lost by 31
+
+### The simulator
+
+Every draw is derived statelessly from the ball's coordinates, keyed by the day.
+There is no generator threaded through the innings whose position depends on how
+many balls have been bowled; there is a keyed function from (innings, over,
+delivery) to a number, and exactly one draw is consumed per delivery, mapped
+through an inverse CDF whose shape depends on the decision taken.
+
+That is what makes the daily comparison mean anything: the number is fixed by
+where the ball sits, and the decision changes only what it is worth. Three tests
+pin it — a thousand repetitions of one decision sequence producing identical
+output, a check that no two coordinates share a draw, and a property test over
+two hundred shuffled bowling orders confirming every over's luck stays put.
+
+The delivery index counts every ball including wides, not legal balls only.
+Using the legal index would give two deliveries in an over containing an extra
+the same coordinate, and they would share a draw.
+
+**The tests found a real design flaw.** Five bowlers of four overs is exactly
+twenty, with no slack, so picking greedily can reach the nineteenth over with
+overs left only for the bowler who just bowled: no legal move. Real captains
+plan around it; a daily puzzle that lets someone walk into an unwinnable
+position through an innocuous choice is unfair. `LegalBowlers` now offers only
+choices that leave the innings completable.
+
+### The gate
+
+Judged by whether the decision carries weight it passes; judged by the specific
+tactic the brief names it half passes, and the difference is worth stating.
+
+Four hundred automated runs per policy, defending 210:
+
+| Policy | Defended |
+|---|---:|
+| Bowl the best available every over | 57.5% |
+| Hold the two best back for the death | 57.2% |
+| Arbitrary legal choice | 48.5% |
+| Bowl the worst available | 46.5% |
+
+Playing well is worth about **nine points of win probability** over choosing
+arbitrarily. Two quite different good strategies tie, so there is no single
+trivial answer.
+
+**Getting there took two corrections, and the first attempt failed.** The
+original build showed the best policy at 51.5% against an arbitrary one at
+52.0%: the decision was decoration. Two causes, both real:
+
+- **The puzzle dealt five elite internationals.** Rabada, Shami, Ashwin, Jadeja
+  and Curran are interchangeable, and measurement says so: barely a run an over
+  between them. A real T20 side has three or four bowlers it trusts and a fifth
+  who is a batter who bowls a bit, and hiding that fifth bowler's four overs is
+  the oldest captaincy problem in the format. Attacks are now stratified by
+  shrunk death-overs economy, taking from the ends rather than evenly.
+- **The outcome model compressed bowler quality.** It is trained to predict one
+  delivery, where the situation dominates and bowler identity is a weak signal.
+  It is right about that and it is calibrated, but it flattened the spread to
+  about a run an over in *every* phase, where the shrunk rate table measures
+  1.00 in the powerplay, 1.72 through the middle and 1.76 at the death. A
+  constant spread is fatal here: if the best bowler is best everywhere, there is
+  nothing to weigh. The engine now tilts the model's distribution until its
+  expected runs match what the rates say, which restores the level without
+  disturbing the situational response. The spread now runs 0.43 in the powerplay
+  to 2.03 at the death.
+
+### The chase half
+
+Six attacking overs in twenty. Three hundred runs per policy, chasing 195:
+
+| Policy | Chased |
+|---|---:|
+| Attack in the first six overs | 46.3% |
+| Attack in the last six | 46.0% |
+| Attack when the rate demands it | 40.7% |
+| Never attack | 26.3% |
+
+**Spending the budget matters enormously and the timing does not.** Twenty
+points between using the tokens and hoarding them; nothing between using them
+early and late. That is a weaker puzzle than the defend half, and it is an
+honest result rather than one to tune away. The likely cause is that the tilt
+model of intent is too blunt: a fixed shift toward boundaries and wickets does
+not capture that attacking is far more valuable when the required rate is
+climbing than when it is not. Worth revisiting before launch.
+
+### Win probability
+
+Held out on IPL 2025 and 2026: log loss 0.425 against a base rate of 0.688,
+AUC 0.904, Brier 0.137. Monotonicity is constrained during training and
+re-verified in Go, because a probability that rises when you need more runs
+would colour a good over red and players notice that immediately.
+
+Three cases are decided by the rules of cricket rather than the model, because
+trees cannot extrapolate and would otherwise answer them from whichever leaf the
+inputs landed in: the target reached, no wickets or balls left, and needing more
+runs than there are balls to score six off. Before that rule, the model gave a
+hopeless chase a 14% chance.
+
+**One thing did not work.** Chases succeed markedly more often in 2025 and 2026
+than a model trained on earlier seasons expects: it predicts 46.5% where 55.8%
+actually happened. Weighting recent seasons more heavily helps a little at 0.95
+per season and hurts at 0.85, because shrinking the effective sample costs more
+than the era correction gains. The residual gap is left documented rather than
+tuned around.
+
+Python and Go agree to 1.11e-16.
 
 ## Milestone 4 findings
 

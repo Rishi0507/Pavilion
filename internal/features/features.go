@@ -158,6 +158,14 @@ func NewContext(s *corpus.Store, a attr.Table, maxSeason uint16) *Context {
 // Rates exposes the fitted rate table, which the simulator also needs.
 func (c *Context) Rates() *rates.Table { return c.rates }
 
+// VenueRunRate returns the historical runs per ball at a venue.
+func (c *Context) VenueRunRate(v corpus.VenueID) float32 {
+	if int(v) < len(c.venueRunRate) {
+		return c.venueRunRate[v]
+	}
+	return c.meanRunRate
+}
+
 // cellSummary reduces a player's posterior in one cell to the four numbers the
 // outcome model uses, plus how much of it is that player's own record.
 func (c *Context) cellSummary(player corpus.PlayerID, cell int) (expRuns, dot, boundary, wicket, weight float32) {

@@ -136,21 +136,35 @@ func run(log *slog.Logger, corpusPath, attrPath, outDir string, holdout int) err
 			"train", fmt.Sprintf("%.3f%%", 100*float64(labelTrain[k])/float64(max(nTrain, 1))),
 			"test", fmt.Sprintf("%.3f%%", 100*float64(labelTest[k])/float64(max(nTest, 1))))
 	}
+	// The win-probability model needs only situational features, so it uses the
+	// venue rate from the training-era context and nothing else that is fitted.
+	base := cache[cutoff]
+	if base == nil {
+		base = features.NewContext(st, attrs, cutoff)
+	}
+	if err := exportWinProb(log, st, base.VenueRunRate, cutoff,
+		filepath.Join(outDir, "wp_train.csv"), filepath.Join(outDir, "wp_test.csv")); err != nil {
+		return err
+	}
+
 	log.Info("export complete", "rate_refits", fits, "took", time.Since(started).Round(time.Millisecond))
 	return nil
 }
 
 func newWriter(path string) (*csv.Writer, func(), error) {
+	header := make([]string, 0, features.Dim+2)
+	header = append(header, features.Names...)
+	header = append(header, "label", "season")
+	return newWriterWithHeader(path, header)
+}
+
+func newWriterWithHeader(path string, header []string) (*csv.Writer, func(), error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create %s: %w", path, err)
 	}
 	buf := bufio.NewWriterSize(f, 1<<20)
 	w := csv.NewWriter(buf)
-
-	header := make([]string, 0, features.Dim+2)
-	header = append(header, features.Names...)
-	header = append(header, "label", "season")
 	if err := w.Write(header); err != nil {
 		f.Close()
 		return nil, nil, fmt.Errorf("write header to %s: %w", path, err)

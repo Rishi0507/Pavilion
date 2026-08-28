@@ -1,0 +1,496 @@
+package sim
+
+import (
+	"errors"
+	"fmt"
+
+	"manhattan/internal/attr"
+	"manhattan/internal/corpus"
+	"manhattan/internal/features"
+)
+
+// This package imports corpus, attr and features for their type vocabulary
+// only: the outcome enum, the handedness and bowling classes, and the shape of
+// a match situation. Duplicating those definitions would be worse than the
+// dependency, and none of them brings I/O, a clock or a logger into the engine.
+// The engine itself remains a pure function from state and decision to state.
+
+// MaxOvers is the length of an innings.
+const MaxOvers = 20
+
+// MaxOversPerBowler is the limit that makes the defend half a puzzle rather
+// than a preference: five bowlers, four overs each, exactly twenty overs, so
+// every over spent early is one unavailable at the death.
+const MaxOversPerBowler = 4
+
+// Wickets is the number a side has to lose.
+const Wickets = 10
+
+// MaxAttacks is the chase half's budget of high-intent overs.
+//
+// Six of twenty. The constraint is what makes the chase a puzzle rather than a
+// slider: attacking is always tempting and usually correct in isolation, so
+// without a budget every over would be the same choice. With one, spending an
+// attack early costs you the option at the death, which is the mirror of the
+// bowling decision.
+const MaxAttacks = 6
+
+// Player is one cricketer as the engine sees them.
+type Player struct {
+	ID    corpus.PlayerID
+	Name  string
+	Hand  attr.Hand
+	Class attr.BowlClass
+}
+
+// Puzzle is one day's fixed problem. It is identical for every player.
+type Puzzle struct {
+	Date   string
+	Target uint16
+	Venue  corpus.VenueID
+
+	// Attack is the five bowlers dealt to defend with.
+	Attack []Player
+	// Batting is the chasing side's order, used by the defend half.
+	Batting []Player
+}
+
+// Intent is what the batting side is trying to do in an over.
+type Intent uint8
+
+const (
+	Block Intent = iota
+	Rotate
+	Attack
+)
+
+func (i Intent) String() string {
+	switch i {
+	case Block:
+		return "block"
+	case Attack:
+		return "attack"
+	}
+	return "rotate"
+}
+
+// lambda is the tilt strength for each intent. Blocking trades runs for
+// survival, attacking the reverse; rotating leaves the model's own view of the
+// situation untouched.
+func (i Intent) lambda() float64 {
+	switch i {
+	case Block:
+		return -0.30
+	case Attack:
+		return 0.30
+	}
+	return 0
+}
+
+// aggressionValue scores each outcome by how much it reflects going after the
+// bowling. A wicket sits alongside a boundary because attacking buys both.
+var aggressionValue = []float64{
+	corpus.Dot:    0,
+	corpus.One:    0.5,
+	corpus.Two:    1.0,
+	corpus.Three:  1.5,
+	corpus.Four:   2.0,
+	corpus.Six:    3.0,
+	corpus.Wicket: 2.0,
+	corpus.Wide:   0,
+	corpus.NoBall: 0,
+}
+
+// Predictor supplies the base outcome distribution for a situation.
+//
+// It is an interface so the engine depends on nothing that reads a file. The
+// production implementation wraps the calibrated model; tests supply fixed
+// distributions and get an engine with no model at all.
+type Predictor interface {
+	Probabilities(s features.State, dst []float64) error
+}
+
+// Delivery is one resolved ball.
+type Delivery struct {
+	Over     uint8
+	Delivery uint8 // ordinal within the over, counting extras
+	Legal    bool
+	Outcome  corpus.Outcome
+	Runs     uint8 // runs added to the score, including extras
+	Batter   Player
+	Bowler   Player
+	Wicket   bool
+}
+
+// State is the engine's view of an innings in progress.
+type State struct {
+	Puzzle *Puzzle
+
+	Score      uint16
+	Wickets    uint8
+	LegalBalls uint16
+	Over       uint8
+
+	// Batting order positions. Striker and NonStriker index Puzzle.Batting.
+	Striker    int
+	NonStriker int
+	NextBatter int
+
+	BallsFaced       []uint16 // per batting position
+	RunsScored       []uint16
+	OversBowled      []uint8 // per bowler in Puzzle.Attack
+	PartnershipRuns  uint16
+	PartnershipBalls uint16
+
+	// LastBowler is the bowler of the previous over; a bowler may not bowl two
+	// in succession.
+	LastBowler int
+
+	// AttacksUsed counts high-intent overs spent.
+	AttacksUsed uint8
+
+	// LimitAttacks enforces the budget. It applies only when the player is
+	// batting: the budget is the chase half's puzzle, not a law of cricket, and
+	// the AI side in the defend half bats to whatever intent the situation
+	// calls for.
+	LimitAttacks bool
+
+	Done bool
+}
+
+// AttacksLeft returns the unspent budget of high-intent overs.
+func (s *State) AttacksLeft() int { return MaxAttacks - int(s.AttacksUsed) }
+
+// ErrNoAttacksLeft is returned when the attack budget is exhausted.
+var ErrNoAttacksLeft = errors.New("sim: no high-intent overs left")
+
+// NewPlayerChase starts the chase half, where the player bats under the
+// attacking-over budget.
+func NewPlayerChase(p *Puzzle) *State {
+	s := NewChase(p)
+	s.LimitAttacks = true
+	return s
+}
+
+// NewChase starts an innings chasing the target, with no budget on intent.
+// This is the defend half, where the AI bats.
+func NewChase(p *Puzzle) *State {
+	return &State{
+		Puzzle:      p,
+		Striker:     0,
+		NonStriker:  1,
+		NextBatter:  2,
+		BallsFaced:  make([]uint16, len(p.Batting)),
+		RunsScored:  make([]uint16, len(p.Batting)),
+		OversBowled: make([]uint8, len(p.Attack)),
+		LastBowler:  -1,
+	}
+}
+
+// RunsNeeded returns how many more runs the batting side needs to win.
+func (s *State) RunsNeeded() int {
+	n := int(s.Puzzle.Target) - int(s.Score)
+	if n < 0 {
+		return 0
+	}
+	return n
+}
+
+// BallsLeft returns legal balls remaining in the innings.
+func (s *State) BallsLeft() int {
+	n := MaxOvers*6 - int(s.LegalBalls)
+	if n < 0 {
+		return 0
+	}
+	return n
+}
+
+// Won reports whether the chasing side has reached the target.
+func (s *State) Won() bool { return s.Score >= s.Puzzle.Target }
+
+// LegalBowlers returns the indices of bowlers who may bowl the next over.
+//
+// A bowler is offered only if choosing him still leaves the rest of the innings
+// completable. Five bowlers of four overs is exactly twenty, with no slack, so
+// a player picking greedily can otherwise reach the nineteenth over with overs
+// left only for the bowler who just bowled, and no legal move. A captain is
+// expected to plan around that; a daily puzzle that lets someone walk into an
+// unwinnable position through an innocuous-looking choice is just unfair.
+func (s *State) LegalBowlers() []int {
+	var out []int
+	remaining := make([]int, len(s.Puzzle.Attack))
+	for i := range s.Puzzle.Attack {
+		remaining[i] = MaxOversPerBowler - int(s.OversBowled[i])
+	}
+
+	for i := range s.Puzzle.Attack {
+		if remaining[i] <= 0 || i == s.LastBowler {
+			continue
+		}
+		remaining[i]--
+		ok := completable(remaining, i)
+		remaining[i]++
+		if ok {
+			out = append(out, i)
+		}
+	}
+	return out
+}
+
+// completable reports whether the overs still owed can be bowled out without
+// anyone bowling twice in a row, given who bowled last.
+//
+// This is the classic question of rearranging a multiset so no two neighbours
+// match. Such an arrangement exists exactly when no single bowler owes more
+// than half the remaining overs, rounded up. The extra wrinkle is the bowler
+// who just finished: when one bowler owes exactly half of an odd number of
+// overs he must take every odd position, the first included, so if that bowler
+// is also the one who just bowled there is no legal arrangement at all.
+func completable(remaining []int, last int) bool {
+	n := 0
+	most, who := 0, -1
+	for i, r := range remaining {
+		if r < 0 {
+			return false
+		}
+		n += r
+		if r > most {
+			most, who = r, i
+		}
+	}
+	if n == 0 {
+		return true
+	}
+	if most > (n+1)/2 {
+		return false
+	}
+	if n%2 == 1 && most == (n+1)/2 && who == last {
+		return false
+	}
+	return true
+}
+
+// ErrIllegalBowler is returned when a chosen bowler cannot bowl the next over.
+var ErrIllegalBowler = errors.New("sim: that bowler cannot bowl this over")
+
+// canPick reports whether giving this bowler the next over leaves the rest of
+// the innings bowlable.
+func (s *State) canPick(bowler int) bool {
+	remaining := make([]int, len(s.Puzzle.Attack))
+	for i := range s.Puzzle.Attack {
+		remaining[i] = MaxOversPerBowler - int(s.OversBowled[i])
+	}
+	if remaining[bowler] <= 0 {
+		return false
+	}
+	remaining[bowler]--
+	return completable(remaining, bowler)
+}
+
+// Over is the result of resolving one over.
+type Over struct {
+	Number     uint8
+	Bowler     Player
+	Intent     Intent
+	Deliveries []Delivery
+	Runs       uint8
+	Wickets    uint8
+	ScoreAfter uint16
+	WktsAfter  uint8
+}
+
+// PlayOver resolves one over and returns it.
+//
+// This is the whole engine. It is a pure function of the state, the decision
+// and the day's key: given the same three it produces the same over, on any
+// machine, for ever.
+func PlayOver(s *State, key DailyKey, bowler int, intent Intent, p Predictor) (Over, error) {
+	if s.Done {
+		return Over{}, errors.New("sim: the innings is over")
+	}
+	if bowler < 0 || bowler >= len(s.Puzzle.Attack) {
+		return Over{}, fmt.Errorf("%w: no bowler %d", ErrIllegalBowler, bowler)
+	}
+	if s.OversBowled[bowler] >= MaxOversPerBowler {
+		return Over{}, fmt.Errorf("%w: %s has bowled his four",
+			ErrIllegalBowler, s.Puzzle.Attack[bowler].Name)
+	}
+	if bowler == s.LastBowler {
+		return Over{}, fmt.Errorf("%w: %s bowled the previous over",
+			ErrIllegalBowler, s.Puzzle.Attack[bowler].Name)
+	}
+	if !s.canPick(bowler) {
+		return Over{}, fmt.Errorf("%w: giving %s this over would strand the innings with no legal bowler",
+			ErrIllegalBowler, s.Puzzle.Attack[bowler].Name)
+	}
+	if intent == Attack && s.LimitAttacks && s.AttacksUsed >= MaxAttacks {
+		return Over{}, ErrNoAttacksLeft
+	}
+
+	bwl := s.Puzzle.Attack[bowler]
+	out := Over{Number: s.Over, Bowler: bwl, Intent: intent}
+
+	base := make([]float64, corpus.NumOutcomes)
+	tilted := make([]float64, corpus.NumOutcomes)
+
+	var legal uint8
+	var deliveryIdx uint8
+
+	for legal < 6 {
+		if s.Wickets >= Wickets || s.Won() || s.LegalBalls >= MaxOvers*6 {
+			break
+		}
+		// A defensive bound: an over of nothing but wides would otherwise spin
+		// for ever, and the delivery index is a uint8.
+		if deliveryIdx >= 200 {
+			break
+		}
+
+		bat := s.Puzzle.Batting[s.Striker]
+		st := features.State{
+			Innings:          2,
+			Over:             s.Over,
+			Score:            s.Score,
+			Wickets:          s.Wickets,
+			LegalBallsBowled: s.LegalBalls,
+			Target:           s.Puzzle.Target,
+			StrikerBalls:     s.BallsFaced[s.Striker],
+			PartnershipRuns:  s.PartnershipRuns,
+			PartnershipBalls: s.PartnershipBalls,
+			Batter:           bat.ID,
+			Bowler:           bwl.ID,
+			BatterHand:       bat.Hand,
+			BowlerClass:      bwl.Class,
+			Venue:            s.Puzzle.Venue,
+		}
+		if err := p.Probabilities(st, base); err != nil {
+			return Over{}, fmt.Errorf("sim: predict: %w", err)
+		}
+		Tilt(base, aggressionValue, intent.lambda(), tilted)
+
+		u := Draw(key, Coord{Innings: 2, Over: s.Over, Delivery: deliveryIdx})
+		outcome := corpus.Outcome(Sample(tilted, u))
+
+		d := Delivery{
+			Over:     s.Over,
+			Delivery: deliveryIdx,
+			Outcome:  outcome,
+			Batter:   bat,
+			Bowler:   bwl,
+		}
+
+		switch outcome {
+		case corpus.Wide, corpus.NoBall:
+			d.Runs = 1
+			s.Score++
+			s.PartnershipRuns++
+		case corpus.Wicket:
+			d.Legal, d.Wicket = true, true
+			legal++
+			s.LegalBalls++
+			s.BallsFaced[s.Striker]++
+			s.PartnershipBalls++
+			s.Wickets++
+			s.PartnershipRuns, s.PartnershipBalls = 0, 0
+			out.Wickets++
+			if s.NextBatter < len(s.Puzzle.Batting) {
+				s.Striker = s.NextBatter
+				s.NextBatter++
+			}
+		default:
+			runs := runsOf(outcome)
+			d.Legal = true
+			d.Runs = runs
+			legal++
+			s.LegalBalls++
+			s.BallsFaced[s.Striker]++
+			s.RunsScored[s.Striker] += uint16(runs)
+			s.PartnershipBalls++
+			s.PartnershipRuns += uint16(runs)
+			s.Score += uint16(runs)
+			if runs%2 == 1 {
+				s.Striker, s.NonStriker = s.NonStriker, s.Striker
+			}
+		}
+
+		out.Runs += d.Runs
+		out.Deliveries = append(out.Deliveries, d)
+		deliveryIdx++
+	}
+
+	// Ends change between overs.
+	s.Striker, s.NonStriker = s.NonStriker, s.Striker
+
+	if intent == Attack {
+		s.AttacksUsed++
+	}
+	s.OversBowled[bowler]++
+	s.LastBowler = bowler
+	s.Over++
+
+	if s.Wickets >= Wickets || s.Won() || s.Over >= MaxOvers {
+		s.Done = true
+	}
+
+	out.ScoreAfter = s.Score
+	out.WktsAfter = s.Wickets
+	return out, nil
+}
+
+func runsOf(o corpus.Outcome) uint8 {
+	switch o {
+	case corpus.One:
+		return 1
+	case corpus.Two:
+		return 2
+	case corpus.Three:
+		return 3
+	case corpus.Four:
+		return 4
+	case corpus.Six:
+		return 6
+	}
+	return 0
+}
+
+// Result is how a completed run finished.
+type Result struct {
+	Defended    bool // the chasing side fell short
+	Score       uint16
+	Wickets     uint8
+	BallsUsed   uint16
+	Margin      int // runs short when defended, wickets in hand when chased
+	MarginRuns  int
+	MarginWkts  int
+	AllOut      bool
+	TargetMet   bool
+	OversPlayed uint8
+}
+
+// Result summarises a finished innings.
+func (s *State) Result() Result {
+	r := Result{
+		Score:       s.Score,
+		Wickets:     s.Wickets,
+		BallsUsed:   s.LegalBalls,
+		AllOut:      s.Wickets >= Wickets,
+		TargetMet:   s.Won(),
+		OversPlayed: s.Over,
+	}
+	if r.TargetMet {
+		r.Defended = false
+		r.MarginWkts = Wickets - int(s.Wickets)
+		r.Margin = r.MarginWkts
+	} else {
+		r.Defended = true
+		r.MarginRuns = int(s.Puzzle.Target) - int(s.Score)
+		r.Margin = r.MarginRuns
+	}
+	return r
+}
+
+// TiltFor applies an intent's tilt to a base distribution. It is exported so
+// that the engine can evaluate what an intent would do without playing an over.
+func TiltFor(base []float64, intent Intent, dst []float64) {
+	Tilt(base, aggressionValue, intent.lambda(), dst)
+}
