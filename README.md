@@ -8,7 +8,7 @@ of high-intent overs.
 The game ships as **Par**. `Manhattan` is the project and repository name, after
 the per-over bar chart that gives the game its visual language.
 
-**Status: milestone 2 of 11.** Not yet playable.
+**Status: milestone 3 of 11.** Not yet playable.
 
 ---
 
@@ -18,6 +18,7 @@ the per-over bar chart that gives the game its visual language.
 make data    # download the Cricsheet IPL archive and people register
 make etl     # build the binary corpus and the data quality report
 make attrs   # resolve batting handedness and bowling type
+make rates   # fit the hierarchical shrunk player rates
 make check   # fail if data quality has regressed
 make test    # run the test suite
 
@@ -173,7 +174,7 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 
 1. **ETL** — Cricsheet to binary corpus, data quality report, entity resolution ✅
 2. **Corpus and CSR matchup graph, sub-10ms aggregation** ✅
-3. Hierarchical shrinkage on player rates
+3. **Hierarchical shrinkage on player rates** ✅
 4. Ball outcome model, calibrated
 5. The simulator: deterministic, pure, tested
 6. **Defend half, playable and ugly** — the gate: if choosing the 17th over is
@@ -183,6 +184,51 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 9. Daily pipeline
 10. Design pass
 11. Leaderboards, stats, sharing, streaks
+
+## Milestone 3 findings
+
+Every player rate the simulator will see is a posterior mean under a
+Dirichlet-multinomial whose prior concentration is fitted per cell by marginal
+likelihood. Rates are cut by role, phase, and matchup class: for a bowler the
+opposition is the batter's handedness, for a batter it is pace against spin.
+Twelve cells in all.
+
+**This is done in Go with empirical Bayes rather than in PyMC.** The simulator
+needs posterior means, not credible intervals, and for point estimates the
+marginal-likelihood fit lands in the same place as MCMC while staying
+deterministic, dependency-free and fast enough to run inside the pipeline
+(123 ms for the whole table). If uncertainty intervals or a deeper hierarchy
+are needed later, NumPyro is the upgrade and the cell structure carries over
+unchanged.
+
+The fitted concentrations run from 107 to 291 deliveries. The number is directly
+interpretable: a bowler needs about 270 death-over balls, roughly 45 overs,
+before his own record outweighs the population in his rating.
+
+**The sanity check the brief demands passes.** Sorted by shrunk death-overs
+economy, the top of the table is:
+
+| # | Bowler | Balls | Shrunk econ | Raw econ | Weight |
+|---:|---|---:|---:|---:|---:|
+| 1 | SP Narine | 1081 | 8.39 | 7.60 | 0.68 |
+| 2 | SL Malinga | 1118 | 8.71 | 8.03 | 0.68 |
+| 3 | JJ Bumrah | 1431 | 9.02 | 8.58 | 0.74 |
+| 4 | R Ashwin | 606 | 9.17 | 8.41 | 0.55 |
+| 5 | DW Steyn | 626 | 9.25 | 8.60 | 0.59 |
+
+Malinga and Bumrah in the top three is what anyone who watches the IPL would
+predict. The batting leaderboards behave the same way: de Villiers, Russell,
+Tim David, Pant and Buttler at the death; Suryavanshi, Head, Abhishek Sharma
+and Narine in the powerplay.
+
+**And the shrinkage earns its keep.** Shreyas Gopal has bowled 56 death-over
+balls at an economy of 6.70. Unshrunk, that would make him the best death bowler
+in the game by a distance, on nine overs of evidence. His posterior is 9.66,
+with a weight of 0.11: the model reports, correctly, that almost nothing about
+him is known.
+
+Full leaderboards, including every fitted concentration, are in
+[`data/out/rates.md`](data/out/rates.md).
 
 ## Milestone 2 findings
 

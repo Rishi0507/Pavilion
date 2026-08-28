@@ -8,9 +8,9 @@ RAW     := data/raw
 OUT     := data/out
 MATCHES := $(RAW)/ipl_json
 
-.PHONY: all data etl attrs check test lint clean
+.PHONY: all data etl attrs rates check baseline bench test lint clean
 
-all: etl attrs test
+all: etl attrs rates test
 
 ## data: download the Cricsheet IPL archive and the people register
 data:
@@ -29,6 +29,12 @@ $(OUT)/corpus.bin: $(wildcard $(MATCHES)/*.json) $(RAW)/people.csv $(wildcard cm
 ## attrs: resolve batting handedness and bowling type for the eligible players
 attrs: $(OUT)/corpus.bin
 	$(GO) run ./cmd/parattr
+
+## rates: fit the hierarchical shrunk player rate table
+rates: $(OUT)/rates.bin
+
+$(OUT)/rates.bin: $(OUT)/corpus.bin data/attributes/players.csv $(wildcard internal/rates/*.go)
+	$(GO) run ./cmd/parrates
 
 ## check: rebuild the report and fail on any data quality regression
 check:

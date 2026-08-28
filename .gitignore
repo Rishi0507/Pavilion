@@ -2,7 +2,7 @@
 # large, redistributable only with attribution, and reproducible.
 /data/raw/
 
-# Generated corpus. A build artifact of `make etl`.
+# Generated corpus and fitted rate table. Build artifacts.
 /data/out/*.bin
 
 # Cached HTTP responses from the attribute pipeline. Regenerable, and large.
