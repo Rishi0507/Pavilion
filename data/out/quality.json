@@ -1,0 +1,249 @@
+{
+  "generated_at": "2026-08-28T04:41:02Z",
+  "source": {
+    "dir": "data\\raw\\ipl_json",
+    "files": 1243,
+    "parsed": 1243,
+    "data_versions": {
+      "1.2.0": 1243
+    },
+    "license": "Ball-by-ball data: Cricsheet (cricsheet.org), by Stephen Rushe, under ODC-BY 1.0 (http://opendatacommons.org/licenses/by/1.0/). Player attributes: English Wikipedia, under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)."
+  },
+  "matches": {
+    "included": 1237,
+    "skipped": [
+      "1359519.json: 1 innings (no result)",
+      "1473492.json: 1 innings (no result)",
+      "1473495.json: 1 innings (no result)",
+      "1527685.json: 1 innings (no result)",
+      "501265.json: 1 innings (no result)",
+      "829763.json: 1 innings (no result)"
+    ],
+    "by_season": {
+      "2008": 58,
+      "2009": 57,
+      "2010": 60,
+      "2011": 72,
+      "2012": 74,
+      "2013": 76,
+      "2014": 60,
+      "2015": 58,
+      "2016": 60,
+      "2017": 59,
+      "2018": 60,
+      "2019": 60,
+      "2020": 60,
+      "2021": 60,
+      "2022": 74,
+      "2023": 73,
+      "2024": 71,
+      "2025": 72,
+      "2026": 73
+    },
+    "venues": 60,
+    "cities": 38,
+    "teams": 19
+  },
+  "deliveries": {
+    "total": 295215,
+    "legal": 284130,
+    "wides": 11778,
+    "noballs": 1257,
+    "byes": 1384,
+    "legbyes": 5746,
+    "penalty": 10,
+    "wickets": 14678,
+    "by_phase": {
+      "death": 67079,
+      "middle": 135439,
+      "powerplay": 92697
+    }
+  },
+  "entity": {
+    "register_rows": 18468,
+    "players": 964,
+    "ambiguous_names": [
+      {
+        "name": "Harmeet Singh",
+        "ids": [
+          "0bf15e52",
+          "2a72fd4f"
+        ]
+      }
+    ],
+    "multi_alias_ids": [
+      {
+        "id": "12314277",
+        "names": [
+          "Arshad Khan",
+          "Arshad Khan (2)"
+        ]
+      },
+      {
+        "id": "21d4e29b",
+        "names": [
+          "NA Saini",
+          "Navdeep Saini"
+        ]
+      },
+      {
+        "id": "d7423da1",
+        "names": [
+          "S Arora",
+          "Salil Arora"
+        ]
+      }
+    ],
+    "unregistered_names": {},
+    "missing_from_register": null,
+    "cricinfo_id_coverage_pct": 100
+  },
+  "integrity": {
+    "ball_index_mismatches": 0,
+    "ball_index_samples": null,
+    "miscounted_overs": [
+      "1136564.json innings 1 over 11: 7 legal balls",
+      "335987.json innings 0 over 7: 5 legal balls",
+      "335994.json innings 1 over 10: 7 legal balls",
+      "336015.json innings 1 over 14: 5 legal balls",
+      "392198.json innings 1 over 10: 7 legal balls",
+      "419155.json innings 0 over 18: 7 legal balls",
+      "501202.json innings 0 over 5: 5 legal balls",
+      "501255.json innings 1 over 9: 5 legal balls"
+    ],
+    "multi_wicket_deliveries": 0,
+    "runs_total_mismatches": 0,
+    "super_over_innings": 34,
+    "abandoned_matches": 6,
+    "innings_with_target": 1237,
+    "innings_over_20_overs": 0
+  },
+  "eligible": {
+    "players": 483,
+    "bowlers": 349,
+    "min_balls_bowled": 120,
+    "min_balls_faced": 200,
+    "batting_hand_known": 473,
+    "bowling_class_known": 336,
+    "attr_rows_sourced": 473,
+    "attr_rows_manual": 0,
+    "attr_rows_inferred": 0,
+    "dealable_players": 471,
+    "dealable_bowlers": 336,
+    "dealable_batters": 225,
+    "excluded": [
+      {
+        "cricsheet_id": "1a0c3177",
+        "name": "P Awana",
+        "balls_bowled": 747,
+        "balls_faced": 14,
+        "last_season": 2014,
+        "missing": "bowling class"
+      },
+      {
+        "cricsheet_id": "13fc5c6d",
+        "name": "DS Rathi",
+        "balls_bowled": 546,
+        "balls_faced": 8,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "5ffc0565",
+        "name": "V Nigam",
+        "balls_bowled": 288,
+        "balls_faced": 71,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "f6d8a7ab",
+        "name": "K Kartikeya",
+        "balls_bowled": 282,
+        "balls_faced": 17,
+        "last_season": 2025,
+        "missing": "bowling class"
+      },
+      {
+        "cricsheet_id": "133bbd61",
+        "name": "Brijesh Sharma",
+        "balls_bowled": 273,
+        "balls_faced": 4,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "7b44eb3e",
+        "name": "Shivang Kumar",
+        "balls_bowled": 234,
+        "balls_faced": 45,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "02dfebbe",
+        "name": "Yash Raj Punja",
+        "balls_bowled": 180,
+        "balls_faced": 0,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "ece7b6b3",
+        "name": "PP Hinge",
+        "balls_bowled": 156,
+        "balls_faced": 9,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "acd4f5dc",
+        "name": "DP Vijaykumar",
+        "balls_bowled": 152,
+        "balls_faced": 1,
+        "last_season": 2008,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "50c09020",
+        "name": "Ashok Sharma",
+        "balls_bowled": 126,
+        "balls_faced": 4,
+        "last_season": 2026,
+        "missing": "batting hand, bowling class"
+      },
+      {
+        "cricsheet_id": "fffa744b",
+        "name": "Naman Dhir",
+        "balls_bowled": 52,
+        "balls_faced": 432,
+        "last_season": 2026,
+        "missing": "batting hand"
+      },
+      {
+        "cricsheet_id": "b5797845",
+        "name": "Priyansh Arya",
+        "balls_bowled": 0,
+        "balls_faced": 435,
+        "last_season": 2026,
+        "missing": "batting hand"
+      }
+    ]
+  },
+  "coverage_pct": {
+    "delivery.batter_resolved": 100,
+    "delivery.bowler_resolved": 100,
+    "match.city": 95.87712206952304,
+    "match.result_winner": 98.464025869038,
+    "match.toss_winner": 100,
+    "match.venue": 100,
+    "player.batting_hand": 97.9296066252588,
+    "player.bowling_class": 96.27507163323783,
+    "player.cricinfo_id": 100
+  },
+  "warnings": [
+    "10 of 483 eligible players have no batting handedness",
+    "13 of 349 eligible bowlers have no bowling class",
+    "12 eligible players are excluded from the dealable pool for want of attributes"
+  ]
+}

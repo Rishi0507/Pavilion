@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-08-27T15:20:57Z",
+  "eligible_players": 483,
+  "eligible_bowlers": 349,
+  "eligible_batters": 227,
+  "min_balls_bowled": 120,
+  "min_balls_faced": 200,
+  "rows": 473,
+  "sourced": 473,
+  "manual": 0,
+  "batting_hand_known": 473,
+  "bowling_class_known": 336,
+  "batting_hand_coverage_pct": 97.9296066252588,
+  "bowling_class_coverage_pct": 96.27507163323783,
+  "by_bowling_class": {
+    "LAP": 54,
+    "LB": 28,
+    "OB": 40,
+    "RAP": 176,
+    "SLA": 33,
+    "SLW": 5
+  },
+  "by_batting_hand": {
+    "LHB": 130,
+    "RHB": 343
+  }
+}
