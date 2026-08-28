@@ -16,6 +16,7 @@
 # because they are the evidence that the model is calibrated and that Go
 # and Python agree.
 /data/models/outcome.txt
+/data/models/winprob.txt
 
 # Go build output.
 /bin/

@@ -1,0 +1,27 @@
+{
+  "features": [
+    "runs_required",
+    "balls_remaining",
+    "wickets_in_hand",
+    "required_rate",
+    "target",
+    "venue_run_rate"
+  ],
+  "monotone": {
+    "runs_required": -1,
+    "balls_remaining": 1,
+    "wickets_in_hand": 1,
+    "required_rate": -1,
+    "target": 0,
+    "venue_run_rate": 0
+  },
+  "best_iteration": 64,
+  "recency_decay": 0.95,
+  "log_loss": {
+    "base_rate": 0.6878424504840922,
+    "model": 0.42464659227171986
+  },
+  "auc": 0.9041324511471656,
+  "brier": 0.13674418937477706,
+  "calibration_error": 0.09665859635855652
+}
