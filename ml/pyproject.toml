@@ -1,0 +1,21 @@
+[project]
+name = "manhattan-ml"
+version = "0.1.0"
+description = "Ball outcome model for Manhattan"
+requires-python = ">=3.11"
+
+# Pinned with a lockfile (uv.lock) so every artifact is reproducible from raw
+# data. LightGBM rather than a neural network: this is a tabular problem with
+# thirty features and a quarter of a million rows, which gradient-boosted trees
+# win on, and which trains in seconds rather than hours.
+dependencies = [
+    "lightgbm>=4.5",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "scikit-learn>=1.5",
+    "matplotlib>=3.9",
+    "scipy>=1.13",
+]
+
+[tool.uv]
+package = false

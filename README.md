@@ -8,7 +8,7 @@ of high-intent overs.
 The game ships as **Par**. `Manhattan` is the project and repository name, after
 the per-over bar chart that gives the game its visual language.
 
-**Status: milestone 3 of 11.** Not yet playable.
+**Status: milestone 4 of 11.** Not yet playable.
 
 ---
 
@@ -19,6 +19,8 @@ make data    # download the Cricsheet IPL archive and people register
 make etl     # build the binary corpus and the data quality report
 make attrs   # resolve batting handedness and bowling type
 make rates   # fit the hierarchical shrunk player rates
+make features # export the training matrix
+make model   # train and calibrate the ball outcome model (needs uv)
 make check   # fail if data quality has regressed
 make test    # run the test suite
 
@@ -175,7 +177,7 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 1. **ETL** — Cricsheet to binary corpus, data quality report, entity resolution ✅
 2. **Corpus and CSR matchup graph, sub-10ms aggregation** ✅
 3. **Hierarchical shrinkage on player rates** ✅
-4. Ball outcome model, calibrated
+4. **Ball outcome model, calibrated** ✅
 5. The simulator: deterministic, pure, tested
 6. **Defend half, playable and ugly** — the gate: if choosing the 17th over is
    not fun in isolation, nothing later fixes it
@@ -184,6 +186,67 @@ Postgres holds runs, results and leaderboards, which are genuinely relational.
 9. Daily pipeline
 10. Design pass
 11. Leaderboards, stats, sharing, streaks
+
+## Milestone 4 findings
+
+A LightGBM multiclass model over the nine outcomes a delivery can produce,
+trained on 240,140 deliveries and evaluated on the 28,228 balls of IPL 2025 and
+2026, which the model never sees.
+
+| Held-out log loss | |
+|---|---:|
+| Population baseline | 1.67528 |
+| Model, uncalibrated | 1.61842 |
+| **Model, calibrated** | **1.61665** |
+
+3.5% better than predicting the population average. That is a modest-sounding
+number and it is the right one to expect: a single delivery is close to
+irreducibly random, and anything claiming a large improvement here is reading
+its own answer. Mean expected calibration error is 0.0072 after temperature
+scaling; reliability diagrams for all nine outcomes are committed in
+[`ml/reports/`](ml/reports/).
+
+### The first version was worse than the baseline
+
+It scored 2.475 against a baseline of 1.675, while validating at 1.44. A gap
+that size is never distribution shift.
+
+The cause was the matchup features, which held **39% of total gain**. The graph
+stores career head-to-head totals, so the edge "Kohli has 159 off Bumrah in 108
+balls" already contains the delivery being predicted. The model learned to read
+the answer off its own features, and on seasons absent from the graph the crutch
+disappeared.
+
+The fix was to featurise on an expanding window: head-to-head records
+accumulate match by match and are folded in only once a match is complete, and
+the rate table is refitted for every season on the seasons strictly before it,
+nineteen fits in all. `TestWalkDoesNotLeakTheCurrentMatch` is the regression
+guard. After the fix the important features are situational, as they should be:
+score, balls remaining, how long the striker has been in, the over.
+
+### No ONNX
+
+The brief specified ONNX. This serves the model by reading LightGBM's own text
+format and walking the trees in pure Go, because `onnxruntime-go` needs cgo and
+a bundled shared library, which turns a static cross-compilable binary into a
+platform-specific one with a native dependency, and buys nothing for 585
+decision trees.
+
+The result is worth the deviation: **Python and Go agree to 2.22e-16**, machine
+epsilon, against a required tolerance of 1e-6. `TestPythonGoParity` checks 500
+held-out rows against the probabilities Python produced at export time.
+
+Inference is 36 microseconds a ball. That is ample for serving; puzzle
+validation simulates millions of deliveries and will want batched prediction
+across simulations, which belongs with that work.
+
+### No train/serve skew by construction
+
+Features are computed once, in Go, by `internal/features`, and both the training
+exporter and the server call it. The usual way a model works in the notebook and
+fails in production is two feature implementations drifting apart; here the only
+thing that can differ is the model evaluation, which is exactly what the parity
+test pins.
 
 ## Milestone 3 findings
 

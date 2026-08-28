@@ -8,9 +8,9 @@ RAW     := data/raw
 OUT     := data/out
 MATCHES := $(RAW)/ipl_json
 
-.PHONY: all data etl attrs rates check baseline bench test lint clean
+.PHONY: all data etl attrs rates features model check baseline bench test lint clean
 
-all: etl attrs rates test
+all: etl attrs rates features model test
 
 ## data: download the Cricsheet IPL archive and the people register
 data:
@@ -36,6 +36,18 @@ rates: $(OUT)/rates.bin
 $(OUT)/rates.bin: $(OUT)/corpus.bin data/attributes/players.csv $(wildcard internal/rates/*.go)
 	$(GO) run ./cmd/parrates
 
+## features: export the training matrix for the outcome model
+features: $(OUT)/train.csv
+
+$(OUT)/train.csv: $(OUT)/corpus.bin data/attributes/players.csv $(wildcard internal/features/*.go)
+	$(GO) run ./cmd/parfeat
+
+## model: train and calibrate the ball outcome model
+model: data/models/outcome.txt
+
+data/models/outcome.txt: $(OUT)/train.csv ml/train.py ml/pyproject.toml
+	cd ml && uv run python train.py
+
 ## check: rebuild the report and fail on any data quality regression
 check:
 	$(GO) run ./cmd/paretl -check
@@ -59,4 +71,4 @@ lint:
 
 ## clean: remove generated artifacts, keeping raw downloads
 clean:
-	rm -f $(OUT)/corpus.bin
+	rm -f $(OUT)/corpus.bin $(OUT)/rates.bin $(OUT)/train.csv $(OUT)/test.csv

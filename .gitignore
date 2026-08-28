@@ -8,8 +8,14 @@
 # Cached HTTP responses from the attribute pipeline. Regenerable, and large.
 /data/raw/wpcache/
 
-# Trained model artifacts.
-/data/models/
+# Exported training matrices. Regenerable from the corpus.
+/data/out/*.csv
+
+# The LightGBM text model is four megabytes of trees; the metadata, the
+# parity fixtures and the reliability plots are small and are committed,
+# because they are the evidence that the model is calibrated and that Go
+# and Python agree.
+/data/models/outcome.txt
 
 # Go build output.
 /bin/
