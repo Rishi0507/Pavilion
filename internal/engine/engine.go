@@ -175,7 +175,7 @@ func (e *Engine) ChooseIntent(s *sim.State) (sim.Intent, error) {
 	}
 
 	for _, intent := range []sim.Intent{sim.Block, sim.Rotate, sim.Attack} {
-		sim.TiltFor(base, intent, tilted)
+		sim.TiltFor(base, intent, s.RequiredRate(), tilted)
 
 		expRuns, pWicket := 0.0, tilted[corpus.Wicket]
 		for k := range corpus.NumOutcomes {

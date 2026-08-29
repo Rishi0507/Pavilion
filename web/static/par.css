@@ -651,3 +651,160 @@ button:focus-visible, a:focus-visible {
   .picks { grid-template-columns: 1fr; }
   .budget-bar { grid-template-columns: 1fr; }
 }
+
+/* The crease: both batters, not just the striker -------------------------- */
+
+.crease {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bat {
+  position: relative;
+  padding: 10px 12px 10px 46px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  min-height: 58px;
+}
+
+#bat-striker { border-color: var(--dim); }
+
+/* Player marks are monograms rather than photographs. Match photography is
+ * owned by agencies and there is no licensed source for it, so initials set in
+ * the scoreboard's own face are both honest and a better fit than a borrowed
+ * headshot would be. */
+.mark {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  background: var(--panel2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+}
+
+#bat-striker .mark { border-color: var(--ink); color: var(--ink); }
+
+.bat-name { display: block; font-size: 13px; font-weight: 600; line-height: 1.25; }
+.bat-figs { display: block; font-size: 12px; color: var(--dim); }
+
+.on-strike {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--level);
+}
+
+.of-twenty { color: var(--faint); letter-spacing: 0.08em; }
+
+/* Draft search ------------------------------------------------------------ */
+
+.search {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--face-num);
+  font-size: 14px;
+}
+
+.search::placeholder { color: var(--faint); }
+.search:focus { outline: none; border-color: var(--dim); }
+
+.picks { max-height: 340px; overflow-y: auto; padding-right: 2px; }
+
+/* Moments -----------------------------------------------------------------
+ *
+ * Two events in cricket are worth marking and no others: a wicket and a big
+ * hit. Everything else is a number changing. These are deliberately short and
+ * small, because an interface that celebrates every single is exhausting by the
+ * third over, and because the over reveal is already the moment that carries
+ * the drama.
+ */
+
+/* A wicket: the ball strikes and the board flinches, the way a scoreboard
+ * operator's hand slips. */
+@keyframes strike {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-3px); }
+  40%  { transform: translateX(3px); }
+  60%  { transform: translateX(-2px); }
+  80%  { transform: translateX(1px); }
+  100% { transform: translateX(0); }
+}
+
+.scoreboard.wicket { animation: strike 320ms ease-out; }
+
+/* The stumps, drawn rather than fetched: three lines that scatter. */
+.stumps {
+  display: inline-flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 22px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.stump {
+  width: 2px;
+  height: 18px;
+  background: var(--loss);
+  transform-origin: bottom center;
+}
+
+.ball.wicket .stumps .stump:nth-child(1) { animation: fall-l 420ms 60ms ease-out both; }
+.ball.wicket .stumps .stump:nth-child(2) { animation: fall-c 420ms 60ms ease-out both; }
+.ball.wicket .stumps .stump:nth-child(3) { animation: fall-r 420ms 60ms ease-out both; }
+
+@keyframes fall-l { to { transform: rotate(-38deg) translateY(2px); opacity: 0.55; } }
+@keyframes fall-c { to { transform: rotate(6deg)  translateY(3px); opacity: 0.55; } }
+@keyframes fall-r { to { transform: rotate(41deg) translateY(2px); opacity: 0.55; } }
+
+/* A six: the ball leaves. A four: it races away along the ground. */
+@keyframes sail {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  70%  { transform: translate(16px, -20px) scale(0.72); opacity: 0.85; }
+  100% { transform: translate(26px, -30px) scale(0.5); opacity: 0; }
+}
+
+@keyframes race {
+  0%   { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(22px); opacity: 0; }
+}
+
+.cherry {
+  position: absolute;
+  right: 4px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--loss);
+  box-shadow: 0 0 0 1px rgba(232, 228, 218, 0.25);
+  pointer-events: none;
+}
+
+.ball { position: relative; overflow: visible; }
+.ball.six .cherry  { animation: sail 620ms 80ms ease-out both; }
+.ball.four .cherry { animation: race 460ms 80ms ease-out both; }
+
+/* A big over gets one quiet acknowledgement on the strip, not a fanfare. */
+@keyframes swell {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+
+.box.big { animation: swell 380ms ease-out; }

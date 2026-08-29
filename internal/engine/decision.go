@@ -58,7 +58,7 @@ func (e *Engine) overCost(s *sim.State, bowler int, intent sim.Intent, buf, tilt
 	if err := e.Probabilities(e.SituationFor(s, bowler), buf); err != nil {
 		return 0, 0
 	}
-	sim.TiltFor(buf, intent, tilted)
+	sim.TiltFor(buf, intent, s.RequiredRate(), tilted)
 	for k := range corpus.NumOutcomes {
 		runs += tilted[k] * runValue(corpus.Outcome(k))
 	}

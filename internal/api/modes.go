@@ -60,7 +60,7 @@ type DraftView struct {
 }
 
 func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
-	bowl, bat := s.Engine.DraftPool(28, 28)
+	bowl, bat := s.Engine.DraftPool(0, 0)
 	target, venue := s.draftSituation()
 
 	writeJSON(w, http.StatusOK, DraftView{
@@ -136,7 +136,7 @@ func (s *Server) buildPractice(avoid string) (*sim.Puzzle, sim.DailyKey, Mode, b
 
 // buildDraft assembles a puzzle around the squad the player picked.
 func (s *Server) buildDraft(req startRequest) (*sim.Puzzle, sim.DailyKey, Mode, bool, error) {
-	bowl, bat := s.Engine.DraftPool(28, 28)
+	bowl, bat := s.Engine.DraftPool(0, 0)
 
 	if err := checkSquad(req.BowlerIDs, bowl, engine.SquadBowlers, engine.BowlerBudget, "bowler"); err != nil {
 		return nil, sim.DailyKey{}, ModeDraft, false, err

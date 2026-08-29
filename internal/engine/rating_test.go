@@ -11,7 +11,7 @@ import "testing"
 // cost more than the entire budget. Nothing on the screen could be completed.
 func TestDraftPoolIsPlayable(t *testing.T) {
 	e := testEngine(t)
-	bowl, bat := e.DraftPool(28, 28)
+	bowl, bat := e.DraftPool(0, 0)
 
 	for _, tc := range []struct {
 		name   string
@@ -70,6 +70,27 @@ func TestDraftPoolIsPlayable(t *testing.T) {
 				len(tc.pool), costs[0], costs[len(costs)-1], cheapest, dearest, tc.budget)
 		})
 	}
+}
+
+// TestDraftBattersAreActuallyBatters guards against tailenders appearing among
+// the batting options. Clearing the corpus threshold is not the same as being
+// someone anyone would pick to chase a total.
+func TestDraftBattersAreActuallyBatters(t *testing.T) {
+	e := testEngine(t)
+	_, bat := e.DraftPool(0, 0)
+
+	// Known lower-order bowlers who clear the eligibility bar on balls faced
+	// but have no business in a batting selection screen.
+	unwanted := map[string]bool{
+		"A Mishra": true, "PP Chawla": true, "B Kumar": true,
+		"YS Chahal": true, "JJ Bumrah": true, "Mohammed Shami": true,
+	}
+	for _, r := range bat {
+		if unwanted[r.Name] {
+			t.Errorf("%s is offered as a batter", r.Name)
+		}
+	}
+	t.Logf("%d batters offered", len(bat))
 }
 
 func sortInts(v []int) {

@@ -678,3 +678,98 @@ func TestBlockingDoesNotSpendTheBudget(t *testing.T) {
 		t.Errorf("AttacksLeft = %d after four non-attacking overs, want %d", s.AttacksLeft(), MaxAttacks)
 	}
 }
+
+// TestAttackingRiskDependsOnNeed pins the rule that makes the timing of the
+// attacking overs matter.
+//
+// With a fixed tilt, spending the budget early and spending it late chased at
+// the same rate, because attacking shifted the distribution identically
+// wherever it was applied. Swinging while the rate is under control has to cost
+// more than swinging when the chase demands it, or there is no decision in when
+// to spend.
+func TestAttackingRiskDependsOnNeed(t *testing.T) {
+	base := []float64{0.30, 0.34, 0.06, 0.004, 0.12, 0.06, 0.05, 0.06, 0.006}
+	total := 0.0
+	for _, v := range base {
+		total += v
+	}
+	for i := range base {
+		base[i] /= total
+	}
+	dst := make([]float64, corpus.NumOutcomes)
+
+	sums := func(v []float64) float64 {
+		t := 0.0
+		for _, x := range v {
+			t += x
+		}
+		return t
+	}
+
+	t.Run("attacking with the rate under control is dangerous", func(t *testing.T) {
+		ApplyIntent(base, Attack, 5.0, dst)
+		if dst[corpus.Wicket] <= base[corpus.Wicket] {
+			t.Errorf("wicket chance %.4f, not above the base %.4f",
+				dst[corpus.Wicket], base[corpus.Wicket])
+		}
+		if math.Abs(sums(dst)-1) > 1e-9 {
+			t.Errorf("distribution sums to %.12f", sums(dst))
+		}
+	})
+
+	t.Run("attacking when the chase demands it is not punished twice", func(t *testing.T) {
+		var easy, hard float64
+		ApplyIntent(base, Attack, 5.0, dst)
+		easy = dst[corpus.Wicket]
+		ApplyIntent(base, Attack, 12.0, dst)
+		hard = dst[corpus.Wicket]
+
+		if hard >= easy {
+			t.Errorf("attacking at a required rate of 12 risks %.4f, "+
+				"no less than attacking at 5 which risks %.4f", hard, easy)
+		}
+	})
+
+	t.Run("the risk fades smoothly as the rate climbs", func(t *testing.T) {
+		prev := 99.0
+		for _, req := range []float64{2, 4, 6, 8, ParRate, 10, 14} {
+			ApplyIntent(base, Attack, req, dst)
+			w := dst[corpus.Wicket]
+			if w > prev+1e-12 {
+				t.Errorf("required %.1f risks %.4f, more than at a lower rate (%.4f)", req, w, prev)
+			}
+			prev = w
+		}
+	})
+
+	t.Run("blocking and rotating are unaffected by the rate", func(t *testing.T) {
+		for _, in := range []Intent{Block, Rotate} {
+			a := make([]float64, corpus.NumOutcomes)
+			b := make([]float64, corpus.NumOutcomes)
+			ApplyIntent(base, in, 3.0, a)
+			ApplyIntent(base, in, 14.0, b)
+			for k := range a {
+				if math.Abs(a[k]-b[k]) > 1e-12 {
+					t.Errorf("%v changed with the required rate at category %d", in, k)
+				}
+			}
+		}
+	})
+
+	t.Run("attacking always scores faster than rotating", func(t *testing.T) {
+		runsOf := func(p []float64) float64 {
+			return p[corpus.One] + 2*p[corpus.Two] + 3*p[corpus.Three] +
+				4*p[corpus.Four] + 6*p[corpus.Six]
+		}
+		for _, req := range []float64{3, 8, 15} {
+			atk := make([]float64, corpus.NumOutcomes)
+			rot := make([]float64, corpus.NumOutcomes)
+			ApplyIntent(base, Attack, req, atk)
+			ApplyIntent(base, Rotate, req, rot)
+			if runsOf(atk) <= runsOf(rot) {
+				t.Errorf("at required %.0f, attacking scores %.3f and rotating %.3f",
+					req, runsOf(atk), runsOf(rot))
+			}
+		}
+	})
+}

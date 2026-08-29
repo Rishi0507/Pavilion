@@ -87,6 +87,86 @@ func (i Intent) lambda() float64 {
 	return 0
 }
 
+// ParRate is the run rate an ordinary over produces without anyone taking a
+// risk for it. It is the line above which attacking is necessary and below
+// which it is a choice.
+const ParRate = 8.5
+
+// recklessness is how much extra a wicket costs for attacking when the chase
+// did not require it.
+//
+// A fixed tilt made the timing of the attacking overs worth nothing: spending
+// them in the first six overs and spending them in the last six both chased
+// about 46% of the time, because the tilt shifted the distribution by the same
+// amount wherever it was applied. That is not how a chase works. Swinging at
+// everything while the required rate is under control is how wickets are thrown
+// away for runs nobody needed; swinging when the rate has climbed is simply the
+// risk the situation already forced on you.
+//
+// So the run side of attacking stays constant and the wicket side does not.
+// With the rate comfortably below par the extra danger is large, and it fades
+// to nothing once the chase demands the runs anyway.
+const recklessness = 1.4
+
+// riskFactor returns the multiplier on the chance of a wicket for an intent, in
+// a chase needing a given rate.
+func riskFactor(i Intent, required float64) float64 {
+	if i != Attack {
+		return 1
+	}
+	if required >= ParRate {
+		return 1
+	}
+	// Zero when the rate is at par, rising as the chase gets easier and
+	// attacking becomes less and less necessary.
+	surplus := (ParRate - required) / ParRate
+	return 1 + recklessness*surplus
+}
+
+// ApplyIntent tilts a base outcome distribution for an intent, given how fast
+// the batting side still has to score.
+//
+// Rotating leaves the model's own view alone. The others move the distribution
+// toward or away from risk, and attacking additionally raises the chance of a
+// wicket when the situation did not call for it.
+func ApplyIntent(base []float64, i Intent, required float64, dst []float64) {
+	Tilt(base, aggressionValue, i.lambda(), dst)
+
+	f := riskFactor(i, required)
+	if f == 1 {
+		return
+	}
+
+	// Raise the wicket probability and take the difference off everything else
+	// in proportion, so the result is still a distribution and the shape of the
+	// scoring outcomes is untouched.
+	w := dst[corpus.Wicket]
+	extra := w*f - w
+	rest := 1 - w
+	if rest <= 0 || extra <= 0 {
+		return
+	}
+	if w+extra >= 1 {
+		extra = 1 - w - 1e-9
+	}
+	scale := (rest - extra) / rest
+	for k := range dst {
+		if corpus.Outcome(k) == corpus.Wicket {
+			continue
+		}
+		dst[k] *= scale
+	}
+	dst[corpus.Wicket] = w + extra
+}
+
+// RequiredRate returns the rate the batting side still has to score at.
+func (s *State) RequiredRate() float64 {
+	if s.BallsLeft() <= 0 {
+		return ParRate
+	}
+	return 6 * float64(s.RunsNeeded()) / float64(s.BallsLeft())
+}
+
 // aggressionValue scores each outcome by how much it reflects going after the
 // bowling. A wicket sits alongside a boundary because attacking buys both.
 var aggressionValue = []float64{
@@ -366,7 +446,7 @@ func PlayOver(s *State, key DailyKey, bowler int, intent Intent, p Predictor) (O
 		if err := p.Probabilities(st, base); err != nil {
 			return Over{}, fmt.Errorf("sim: predict: %w", err)
 		}
-		Tilt(base, aggressionValue, intent.lambda(), tilted)
+		ApplyIntent(base, intent, s.RequiredRate(), tilted)
 
 		u := Draw(key, Coord{Innings: 2, Over: s.Over, Delivery: deliveryIdx})
 		outcome := corpus.Outcome(Sample(tilted, u))
@@ -489,8 +569,9 @@ func (s *State) Result() Result {
 	return r
 }
 
-// TiltFor applies an intent's tilt to a base distribution. It is exported so
-// that the engine can evaluate what an intent would do without playing an over.
-func TiltFor(base []float64, intent Intent, dst []float64) {
-	Tilt(base, aggressionValue, intent.lambda(), dst)
+// TiltFor applies an intent to a base distribution at a given required rate. It
+// is exported so the engine can evaluate what an intent would do without
+// playing the over.
+func TiltFor(base []float64, intent Intent, required float64, dst []float64) {
+	ApplyIntent(base, intent, required, dst)
 }

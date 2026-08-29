@@ -7,7 +7,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -171,19 +174,48 @@ func webAssets(dev bool) (http.Handler, error) {
 	mux := http.NewServeMux()
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheFor(time.Hour, http.FileServerFS(static))))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		page := index
 		if dev {
 			// Re-read so an edit shows up without a restart.
 			if b, err := fs.ReadFile(root, "templates/index.html"); err == nil {
-				index = b
+				page = b
 			}
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
-		w.Write(index)
+		w.Write(stamp(root, page))
 	})
 	return mux, nil
 }
 
+// stamp rewrites the asset links so their URL changes whenever their contents
+// do.
+//
+// Serving the script at a fixed path and caching it for an hour meant a browser
+// could hold yesterday's script against today's page: the two were each
+// correct, and together they failed on the first click. Worse, the fix could
+// not take effect, because a response still inside its freshness window is
+// never revalidated, so the stale copy kept being used regardless of what the
+// server now said.
+//
+// A content hash in the query string removes the whole problem. A changed file
+// is a changed URL, which the browser has no cached answer for, and an
+// unchanged file keeps its long cache.
+func stamp(root fs.FS, page []byte) []byte {
+	for _, name := range []string{"par.css", "par.js"} {
+		b, err := fs.ReadFile(root, "static/"+name)
+		if err != nil {
+			continue
+		}
+		sum := sha256.Sum256(b)
+		versioned := fmt.Sprintf("/static/%s?v=%s", name, hex.EncodeToString(sum[:4]))
+		page = bytes.ReplaceAll(page, []byte("/static/"+name), []byte(versioned))
+	}
+	return page
+}
+
+// cacheFor allows assets to be held, which is safe because their URLs carry a
+// content hash and therefore change whenever they do.
 func cacheFor(d time.Duration, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", int(d.Seconds())))

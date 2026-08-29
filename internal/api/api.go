@@ -265,24 +265,30 @@ func (s *Server) handleStartRun(w http.ResponseWriter, r *http.Request) {
 
 // StateView is the game as the client draws it.
 type StateView struct {
-	Half           string   `json:"half"`
-	Over           int      `json:"over"`
-	Score          int      `json:"score"`
-	Wickets        int      `json:"wickets"`
-	Target         int      `json:"target"`
-	RunsNeeded     int      `json:"runs_needed"`
-	BallsLeft      int      `json:"balls_left"`
-	Striker        string   `json:"striker"`
-	StrikerBalls   int      `json:"striker_balls"`
-	NonStriker     string   `json:"non_striker"`
-	LegalBowlers   []int    `json:"legal_bowlers"`
-	OversBowled    []int    `json:"overs_bowled"`
-	AttacksLeft    int      `json:"attacks_left"`
-	WinProbability float64  `json:"win_probability"`
-	Done           bool     `json:"done"`
-	Decisions      int      `json:"decisions"`
-	DefendGrid     []string `json:"defend_grid"`
-	ChaseGrid      []string `json:"chase_grid"`
+	Half       string `json:"half"`
+	Over       int    `json:"over"`
+	Score      int    `json:"score"`
+	Wickets    int    `json:"wickets"`
+	Target     int    `json:"target"`
+	RunsNeeded int    `json:"runs_needed"`
+	BallsLeft  int    `json:"balls_left"`
+	// Both batters are reported, not only the one on strike. A partnership is
+	// two people, and which of them is at the other end matters to the next
+	// decision.
+	Striker         string   `json:"striker"`
+	StrikerBalls    int      `json:"striker_balls"`
+	StrikerRuns     int      `json:"striker_runs"`
+	NonStriker      string   `json:"non_striker"`
+	NonStrikerBalls int      `json:"non_striker_balls"`
+	NonStrikerRuns  int      `json:"non_striker_runs"`
+	LegalBowlers    []int    `json:"legal_bowlers"`
+	OversBowled     []int    `json:"overs_bowled"`
+	AttacksLeft     int      `json:"attacks_left"`
+	WinProbability  float64  `json:"win_probability"`
+	Done            bool     `json:"done"`
+	Decisions       int      `json:"decisions"`
+	DefendGrid      []string `json:"defend_grid"`
+	ChaseGrid       []string `json:"chase_grid"`
 }
 
 func (s *Server) stateOf(run *session.Run) StateView {
@@ -313,7 +319,10 @@ func (s *Server) stateOf(run *session.Run) StateView {
 	if !st.Done {
 		v.Striker = st.Puzzle.Batting[st.Striker].Name
 		v.StrikerBalls = int(st.BallsFaced[st.Striker])
+		v.StrikerRuns = int(st.RunsScored[st.Striker])
 		v.NonStriker = st.Puzzle.Batting[st.NonStriker].Name
+		v.NonStrikerBalls = int(st.BallsFaced[st.NonStriker])
+		v.NonStrikerRuns = int(st.RunsScored[st.NonStriker])
 	}
 	v.OversBowled = make([]int, 0, len(st.OversBowled))
 	for _, n := range st.OversBowled {

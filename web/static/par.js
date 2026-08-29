@@ -15,6 +15,19 @@ const BALL_MS = REDUCED ? 0 : 130;
 const BEAT_MS = REDUCED ? 0 : 380;
 
 const el = (id) => document.getElementById(id);
+
+// Player marks are monograms. Match photography belongs to picture agencies and
+// there is no licensed source for it, so initials set in the board's own face
+// are both honest and a better fit than a borrowed headshot.
+function monogram(name) {
+  if (!name) return '—';
+  const parts = name.trim().split(/\s+/);
+  const last = parts[parts.length - 1];
+  const first = parts.length > 1 ? parts[0] : '';
+  const a = (first.match(/[A-Za-z]/) || [''])[0];
+  const b = (last.match(/[A-Za-z]/) || [''])[0];
+  return (a + b).toUpperCase() || last.slice(0, 2).toUpperCase();
+}
 const sleep = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
 
 const state = {
@@ -158,11 +171,33 @@ async function loadDraft() {
 
     renderPicks('draft-bowlers', d.bowlers, state.pickedBowlers, d.pick_bowlers, d.bowler_budget);
     renderPicks('draft-batters', d.batters, state.pickedBatters, d.pick_batters, d.batter_budget);
+    el('hint-bowlers').textContent = `pick 5 of ${d.bowlers.length}`;
+    el('hint-batters').textContent = `pick 6 of ${d.batters.length}`;
+    wireSearch('search-bowlers', 'draft-bowlers');
+    wireSearch('search-batters', 'draft-batters');
     updateBudget();
     show('draft');
   } catch (err) {
     showError(err.message);
   }
+}
+
+// wireSearch filters a pool in place. With a hundred bowlers on offer, a list
+// without a search box is a list nobody reads to the end of.
+function wireSearch(inputID, containerID) {
+  const input = el(inputID);
+  input.value = '';
+  input.oninput = () => {
+    const q = input.value.trim().toLowerCase();
+    for (const btn of el(containerID).children) {
+      const name = btn.querySelector('.pick-name').textContent.toLowerCase();
+      const style = btn.querySelector('.pick-style').textContent.toLowerCase();
+      // A selected player always stays visible, so a filter cannot hide part of
+      // the side being assembled.
+      btn.hidden = q !== '' && !btn.classList.contains('on') &&
+        !name.includes(q) && !style.includes(q);
+    }
+  };
 }
 
 function costOfPicked(pool, picked) {
@@ -299,8 +334,11 @@ function render(s) {
 
   el('sb-score').textContent = s.score;
   el('sb-wkts').textContent = s.wickets;
-  el('over-no').textContent = `OVER ${Math.min(s.over + 1, 20)}`;
-  el('striker').textContent = s.striker ? `${s.striker} (${s.striker_balls})` : '';
+  el('over-no').innerHTML =
+    `OVER ${Math.min(s.over + 1, 20)} <span class="of-twenty">of 20</span>`;
+
+  setBatter('striker', s.striker, s.striker_runs, s.striker_balls);
+  setBatter('nonstriker', s.non_striker, s.non_striker_runs, s.non_striker_balls);
 
   el('sb-need-label').textContent = chasing ? 'YOU NEED' : 'THEY NEED';
   el('sb-need').textContent = `${s.runs_needed} off ${s.balls_left}`;
@@ -316,6 +354,12 @@ function render(s) {
 
   if (chasing) renderIntents(s);
   else renderBowlers(s);
+}
+
+function setBatter(which, name, runs, balls) {
+  el(`mark-${which}`).textContent = monogram(name);
+  el(`name-${which}`).textContent = name || '—';
+  el(`figs-${which}`).textContent = name ? `${runs} (${balls})` : '';
 }
 
 function renderBowlers(s) {
@@ -388,6 +432,15 @@ async function playOver(half, body) {
     const wasHalf = state.half;
     render(r.state);
 
+    if (r.runs >= 15 && !REDUCED) {
+      const strip = wasHalf === 'defend' ? 'strip-defend' : 'strip-chase';
+      const box = el(strip).children[r.over - 1];
+      if (box) {
+        box.classList.add('big');
+        setTimeout(() => box.classList.remove('big'), 420);
+      }
+    }
+
     if (wasHalf === 'defend' && r.state.half === 'chase') await handover();
     if (r.state.half === 'finished') {
       state.half = 'finished';
@@ -410,10 +463,35 @@ async function revealOver(r) {
   for (const d of r.deliveries) {
     const b = document.createElement('span');
     b.className = 'ball';
-    if (d.wicket) b.classList.add('wicket');
-    else if (d.outcome === '4' || d.outcome === '6') b.classList.add('boundary');
-    else if (!d.legal) b.classList.add('extra');
     b.textContent = d.wicket ? 'W' : d.outcome;
+
+    if (d.wicket) {
+      b.classList.add('wicket');
+      if (!REDUCED) {
+        // Three lines that scatter: the stumps, drawn rather than fetched.
+        const stumps = document.createElement('span');
+        stumps.className = 'stumps';
+        for (let i = 0; i < 3; i++) {
+          const st = document.createElement('span');
+          st.className = 'stump';
+          stumps.append(st);
+        }
+        b.append(stumps);
+        el('scoreboard-wrap').classList.remove('wicket');
+        void el('scoreboard-wrap').offsetWidth;
+        el('scoreboard-wrap').classList.add('wicket');
+      }
+    } else if (d.outcome === '4' || d.outcome === '6') {
+      b.classList.add('boundary', d.outcome === '6' ? 'six' : 'four');
+      if (!REDUCED) {
+        const cherry = document.createElement('span');
+        cherry.className = 'cherry';
+        b.append(cherry);
+      }
+    } else if (!d.legal) {
+      b.classList.add('extra');
+    }
+
     wrap.append(b);
     await sleep(BALL_MS);
   }

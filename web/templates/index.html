@@ -72,10 +72,12 @@
       </div>
     </div>
 
-    <h3 class="sub-heading">Bowlers <span class="hint">pick 5</span></h3>
+    <h3 class="sub-heading">Bowlers <span class="hint" id="hint-bowlers">pick 5</span></h3>
+    <input class="search" id="search-bowlers" type="search" placeholder="Search bowlers" autocomplete="off">
     <div class="picks" id="draft-bowlers"></div>
 
-    <h3 class="sub-heading">Batters <span class="hint">pick 6</span></h3>
+    <h3 class="sub-heading">Batters <span class="hint" id="hint-batters">pick 6</span></h3>
+    <input class="search" id="search-batters" type="search" placeholder="Search batters" autocomplete="off">
     <div class="picks" id="draft-batters"></div>
 
     <p class="draft-note" id="draft-note"></p>
@@ -119,7 +121,7 @@
 
     <p class="phase-banner" id="phase-banner">YOU ARE BOWLING · stop them reaching the target</p>
 
-    <div class="scoreboard">
+    <div class="scoreboard" id="scoreboard-wrap">
       <div class="sb-main">
         <span class="sb-score" id="sb-score">0</span><span class="sb-sep">/</span><span class="sb-wkts" id="sb-wkts">0</span>
       </div>
@@ -146,8 +148,21 @@
     </div>
 
     <div class="over-head">
-      <span class="over-no" id="over-no">OVER 1</span>
-      <span class="striker" id="striker">—</span>
+      <span class="over-no" id="over-no">OVER 1 <span class="of-twenty">of 20</span></span>
+    </div>
+
+    <div class="crease" id="crease">
+      <div class="bat" id="bat-striker">
+        <span class="mark" id="mark-striker">—</span>
+        <span class="bat-name" id="name-striker">—</span>
+        <span class="bat-figs" id="figs-striker">—</span>
+        <span class="on-strike">on strike</span>
+      </div>
+      <div class="bat" id="bat-nonstriker">
+        <span class="mark" id="mark-nonstriker">—</span>
+        <span class="bat-name" id="name-nonstriker">—</span>
+        <span class="bat-figs" id="figs-nonstriker">—</span>
+      </div>
     </div>
 
     <div class="balls" id="balls" aria-live="polite"></div>

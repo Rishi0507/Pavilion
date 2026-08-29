@@ -42,7 +42,7 @@ type Rated struct {
 // lower third of each: enough to afford one or two of the best, never five.
 const (
 	BowlerBudget = 62
-	BatterBudget = 80
+	BatterBudget = 90
 	SquadBowlers = 5
 	SquadBatters = 6
 	MinCost      = 3
@@ -167,16 +167,36 @@ func costOf(q float64) int {
 	return max(MinCost, min(MaxCost, c))
 }
 
+// Draft eligibility.
+//
+// Clearing the corpus-wide threshold is not the same as being a batter. A
+// spinner who has faced three hundred balls at number nine over a long career
+// qualifies as "eligible" and is emphatically not someone anyone would pick to
+// chase a total, which is why Amit Mishra was appearing among the batting
+// options. The draft therefore asks for a real record in the role, not merely a
+// countable one.
+const (
+	draftMinBallsFaced  = 500
+	draftMinBallsBowled = 400
+	draftMinBatQuality  = 0.20
+
+	// The clearest signal of whether someone is a batter is how long they last
+	// when they get in. A top-order player faces twenty-five or thirty balls an
+	// innings; a bowler who bats at nine faces three or four, however many they
+	// accumulate over a decade. Career totals cannot tell the two apart, and
+	// that is how Chawla and Mishra reached the batting screen.
+	draftMinBallsPerInnings = 11.0
+)
+
 // DraftPool returns the bowlers and batters a player may choose between.
 //
-// The pool is capped so the choice is a decision rather than a spreadsheet
-// exercise, and it is sorted by price so the trade-off is the first thing
-// visible.
+// Everyone with a real record in the role is offered, sorted by price, so the
+// choice is genuinely open rather than a short list somebody else drew up.
 func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 	vols := e.store.Volumes()
 
 	for _, id := range e.bowlers {
-		if vols[id].LastSeason < recentSince {
+		if vols[id].LastSeason < recentSince || vols[id].BallsBowled < draftMinBallsBowled {
 			continue
 		}
 		q, note := e.bowlerQuality(id)
@@ -190,11 +210,17 @@ func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 		})
 	}
 	for _, id := range e.batters {
-		if vols[id].LastSeason < recentSince {
+		v := vols[id]
+		if v.LastSeason < recentSince || v.BallsFaced < draftMinBallsFaced {
+			continue
+		}
+		if v.Innings == 0 || float64(v.BallsFaced)/float64(v.Innings) < draftMinBallsPerInnings {
 			continue
 		}
 		q, note := e.batterQuality(id)
-		if q <= 0 {
+		// A low score here means a tailender rather than a cheap option, and a
+		// side of tailenders is not a budget decision, it is a broken screen.
+		if q < draftMinBatQuality {
 			continue
 		}
 		p := e.player(id)
@@ -215,8 +241,18 @@ func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 	byCost(bowl)
 	byCost(bat)
 
-	return spread(bowl, bowlers, SquadBowlers, BowlerBudget),
-		spread(bat, batters, SquadBatters, BatterBudget)
+	// A cap of zero means everyone who qualifies.
+	if bowlers > 0 {
+		bowl = spread(bowl, bowlers, SquadBowlers, BowlerBudget)
+	} else {
+		bowl = affordable(bowl, SquadBowlers, BowlerBudget)
+	}
+	if batters > 0 {
+		bat = spread(bat, batters, SquadBatters, BatterBudget)
+	} else {
+		bat = affordable(bat, SquadBatters, BatterBudget)
+	}
+	return bowl, bat
 }
 
 // spread trims a price-sorted list to n entries while keeping its whole range.
