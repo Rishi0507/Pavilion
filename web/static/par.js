@@ -96,7 +96,14 @@ const state = {
   busy: false,
 };
 
-const overRuns = { defend: [], chase: [] };
+/* The over log.
+ *
+ * One entry per completed over, holding what a scorer would write down: who
+ * bowled, what it cost and how many went down. The Manhattan chart and the
+ * bowling card are both drawn from this, so the two can never disagree with
+ * each other about what happened.
+ */
+const log = { defend: [], chase: [] };
 
 /* Transport --------------------------------------------------------------- */
 
@@ -315,10 +322,10 @@ function beginRun() {
   state.token = pending.token;
   state.decisions = pending.decisions;
   state.half = pending.state.half;
-  overRuns.defend = [];
-  overRuns.chase = [];
+  log.defend = [];
+  log.chase = [];
 
-  buildStrips();
+  buildCharts();
   render(pending.state);
   show('play');
   pending = null;
@@ -466,36 +473,149 @@ function updateBudget() {
       `${d.pick_batters - state.pickedBatters.length} more batter(s).`;
 }
 
-/* The over strip ---------------------------------------------------------- */
+/* The Manhattan ------------------------------------------------------------
+ *
+ * A bar for every over: height is what the over cost, colour is what it did to
+ * the win probability, and a notch across the top is a wicket. It is the chart
+ * every scorecard in the sport draws, and the one this project is named after.
+ *
+ * The version before this was twenty small squares with a number in each. That
+ * told you the runs and the colour and nothing else, and at the width of a
+ * column it told you neither: a two-digit number in a fourteen-pixel box is not
+ * a number, it is a smudge. A bar is read by its height, which survives being
+ * small, and the shape of twenty of them is the shape of the innings — where
+ * the powerplay went, where it stalled, which over broke it.
+ */
 
-function buildStrips() {
-  for (const id of ['strip-defend', 'strip-chase']) {
-    const strip = el(id);
-    strip.replaceChildren();
-    for (let i = 0; i < 20; i++) {
-      const box = document.createElement('div');
-      box.className = 'box';
-      strip.append(box);
-    }
+// The tallest bar. Overs above this are clipped and marked, which is rarer than
+// scaling every innings to its own maximum and much easier to compare across
+// two halves of the same game.
+const MH_MAX = 24;
+
+function buildPlot(id) {
+  const plot = el(id);
+  plot.replaceChildren();
+  for (let i = 0; i < 20; i++) {
+    const col = document.createElement('div');
+    col.className = 'mh-col';
+
+    const bar = document.createElement('div');
+    bar.className = 'mh-bar';
+
+    const runs = document.createElement('span');
+    runs.className = 'mh-runs';
+
+    col.append(runs, bar);
+    plot.append(col);
   }
-  el('strip-chase-row').hidden = true;
 }
 
-function paintStrip(id, grades, runs, currentOver) {
-  const boxes = el(id).children;
-  for (let i = 0; i < boxes.length; i++) {
-    const box = boxes[i];
-    box.className = 'box';
-    if (i < grades.length) {
-      box.classList.add(grades[i]);
-      box.textContent = runs[i] === undefined ? '' : runs[i];
-    } else if (i === currentOver) {
-      box.classList.add('now');
-      box.textContent = '';
-    } else {
-      box.textContent = '';
+function buildCharts() {
+  buildPlot('mh-defend');
+  buildPlot('mh-chase');
+  el('mh-chase-wrap').hidden = true;
+  el('bowling-card').hidden = true;
+}
+
+function paintChart(id, entries, grades, currentOver) {
+  const cols = el(id).children;
+  for (let i = 0; i < cols.length; i++) {
+    const col = cols[i];
+    const bar = col.querySelector('.mh-bar');
+    const runs = col.querySelector('.mh-runs');
+    const e = entries[i];
+
+    col.className = 'mh-col';
+    bar.replaceChildren();
+
+    if (!e) {
+      bar.style.height = '0%';
+      runs.textContent = '';
+      if (i === currentOver) col.classList.add('now');
+      continue;
+    }
+
+    col.classList.add(grades[i] || 'level');
+    // A maiden still needs to occupy the axis, or the innings appears to have a
+    // hole in it where the best over of the day was.
+    bar.style.height = `${Math.max(4, Math.min(100, (e.runs / MH_MAX) * 100))}%`;
+    runs.textContent = e.runs;
+    if (e.runs > MH_MAX) col.classList.add('over-scale');
+
+    for (let w = 0; w < e.wickets; w++) {
+      const notch = document.createElement('i');
+      notch.className = 'mh-wkt';
+      notch.style.setProperty('--n', String(w));
+      bar.append(notch);
     }
   }
+}
+
+function paintCharts(s, chasing) {
+  paintChart('mh-defend', log.defend, s.defend_grid || [], chasing ? -1 : s.over);
+  paintChart('mh-chase', log.chase, s.chase_grid || [], chasing ? s.over : -1);
+
+  el('mh-chase-wrap').hidden = !chasing;
+  el('mh-defend-total').textContent = totalOf(log.defend);
+  el('mh-chase-total').textContent = totalOf(log.chase);
+}
+
+function totalOf(entries) {
+  if (!entries.length) return '';
+  const runs = entries.reduce((a, e) => a + e.runs, 0);
+  const wkts = entries.reduce((a, e) => a + e.wickets, 0);
+  return `${runs}/${wkts} in ${entries.length}`;
+}
+
+/* The bowling card ---------------------------------------------------------
+ *
+ * Overs, runs, wickets and economy for each of the five, which is what a scorer
+ * keeps and what a captain actually decides on. The game asked a player to
+ * choose a bowler every over while showing them only how many overs each had
+ * left, which is the least interesting of the four numbers.
+ */
+function renderBowlingCard() {
+  const card = el('bowling-card');
+  if (!state.puzzle || state.half !== 'defend' || !log.defend.length) {
+    card.hidden = true;
+    return;
+  }
+
+  const figures = new Map();
+  for (const b of state.puzzle.attack) {
+    figures.set(b.name, { name: b.name, team: b.team, colour: b.colour, overs: 0, runs: 0, wickets: 0 });
+  }
+  for (const e of log.defend) {
+    const f = figures.get(e.bowler);
+    if (!f) continue;
+    f.overs += 1;
+    f.runs += e.runs;
+    f.wickets += e.wickets;
+  }
+
+  const rows = [...figures.values()]
+    .filter((f) => f.overs > 0)
+    .sort((a, b) => b.wickets - a.wickets || a.runs / a.overs - b.runs / b.overs);
+
+  const body = el('bowling-rows');
+  body.replaceChildren();
+  for (const f of rows) {
+    const tr = document.createElement('tr');
+    if (f.colour) tr.style.setProperty('--tint', f.colour);
+
+    const name = document.createElement('th');
+    name.scope = 'row';
+    name.textContent = f.name;
+
+    tr.append(name);
+    for (const v of [f.overs, f.runs, f.wickets, (f.runs / f.overs).toFixed(1)]) {
+      const td = document.createElement('td');
+      td.textContent = v;
+      tr.append(td);
+    }
+    body.append(tr);
+  }
+  card.hidden = rows.length === 0;
 }
 
 /* Rendering --------------------------------------------------------------- */
@@ -589,9 +709,8 @@ function render(s) {
   }
   el('sb-meter-fill').style.width = `${wp}%`;
 
-  el('strip-chase-row').hidden = !chasing;
-  paintStrip('strip-defend', s.defend_grid || [], overRuns.defend, chasing ? -1 : s.over);
-  paintStrip('strip-chase', s.chase_grid || [], overRuns.chase, chasing ? s.over : -1);
+  paintCharts(s, chasing);
+  renderBowlingCard();
 
   el('controls-defend').hidden = chasing;
   el('controls-chase').hidden = !chasing;
@@ -670,16 +789,21 @@ async function playOver(half, body) {
     const r = await api('POST', `/api/v1/run/${state.runID}/${half}/over`, body);
     await revealOver(r);
 
-    (half === 'defend' ? overRuns.defend : overRuns.chase).push(r.runs);
+    (half === 'defend' ? log.defend : log.chase).push({
+      over: r.over,
+      bowler: r.bowler,
+      runs: r.runs,
+      wickets: r.wickets,
+    });
     const wasHalf = state.half;
     render(r.state);
 
     if (r.runs >= 15 && !REDUCED) {
-      const strip = wasHalf === 'defend' ? 'strip-defend' : 'strip-chase';
-      const box = el(strip).children[r.over - 1];
-      if (box) {
-        box.classList.add('big');
-        setTimeout(() => box.classList.remove('big'), 420);
+      const plot = wasHalf === 'defend' ? 'mh-defend' : 'mh-chase';
+      const col = el(plot).children[r.over - 1];
+      if (col) {
+        col.classList.add('big');
+        setTimeout(() => col.classList.remove('big'), 460);
       }
     }
 
@@ -769,6 +893,20 @@ async function finish() {
     el('result-verdict').textContent = verdictOf(r);
     el('share').textContent = r.share;
     el('result-score').textContent = (r.total_score >= 0 ? '+' : '') + r.total_score.toFixed(0);
+    el('result-score').className = 'big-figure ' +
+      (r.total_score > 2 ? 'good' : r.total_score < -2 ? 'bad' : 'level');
+
+    paintHalf('defend', r.defended, r.defend_margin, r.defend_margin_wkts, r.defend_score);
+    paintHalf('chase', r.chased, r.chase_margin, r.chase_margin_wkts, r.chase_score);
+
+    // The same chart the game was played on, so the result is read in the same
+    // terms as the decisions were made in.
+    buildPlot('mh-r-defend');
+    buildPlot('mh-r-chase');
+    paintChart('mh-r-defend', log.defend, r.defend_grid || [], -1);
+    paintChart('mh-r-chase', log.chase, r.chase_grid || [], -1);
+    el('mh-r-defend-total').textContent = totalOf(log.defend);
+    el('mh-r-chase-total').textContent = totalOf(log.chase);
     el('result-pct').textContent = r.counts && r.day.runs > 1 ? Math.round(r.percentile) : '—';
     el('result-streak').textContent = r.counts && r.streak ? r.streak : '—';
 
@@ -783,6 +921,46 @@ async function finish() {
   } catch (err) {
     showError(err.message);
   }
+}
+
+/* paintHalf summarises one innings: whether it was won, by how much, and what
+ * the choices in it were worth.
+ *
+ * The margin is the part a scorecard leads with and the game never showed at
+ * all. Holding a target by one run and holding it by forty are different
+ * afternoons.
+ *
+ * Cricket reports a margin two ways and neither substitutes for the other: a
+ * side that falls short loses by runs, and a side that gets there wins with
+ * wickets in hand. Reading only the runs figure produced "short by 0 runs" for
+ * a chase that succeeded, which is not a thing anybody says.
+ */
+function paintHalf(which, won, runs, wickets, score) {
+  const box = el(`half-${which}`);
+  box.classList.toggle('won', won);
+  box.classList.toggle('lost', !won);
+
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const decisions = `decisions ${score >= 0 ? '+' : ''}${score.toFixed(0)}`;
+
+  let mark;
+  let line;
+  if (which === 'defend') {
+    // Defending: won means they fell short by runs, lost means they got there
+    // with wickets to spare.
+    mark = won ? 'HELD' : 'LOST';
+    line = won
+      ? `by ${plural(Math.abs(runs), 'run')}`
+      : `they got there with ${plural(Math.abs(wickets), 'wicket')} in hand`;
+  } else {
+    mark = won ? 'CHASED' : 'SHORT';
+    line = won
+      ? `with ${plural(Math.abs(wickets), 'wicket')} in hand`
+      : `by ${plural(Math.abs(runs), 'run')}`;
+  }
+
+  el(`half-${which}-mark`).textContent = mark;
+  el(`half-${which}-line`).textContent = `${line} · ${decisions}`;
 }
 
 function verdictOf(r) {
@@ -819,6 +997,37 @@ for (const btn of document.querySelectorAll('.mode')) {
     else openRun({ mode, avoid: state.lastSituation });
   };
 }
+
+/* Keyboard ------------------------------------------------------------------
+ *
+ * A daily puzzle is played over and over, and forty mouse trips to five cards
+ * is forty more than it needs to be. The digits pick a bowler while defending
+ * and an intent while chasing; the numbering matches the order on screen, so
+ * the keys are learned by using them rather than by reading about them.
+ *
+ * Nothing here fires while an over is being revealed, and nothing fires while a
+ * search box has focus, or typing "little" into the bowler filter would bowl
+ * four overs.
+ */
+window.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (state.busy || el('screen-play').hidden) return;
+
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  const n = Number(e.key);
+  if (!Number.isInteger(n) || n < 1) return;
+
+  const buttons = state.half === 'chase'
+    ? [...el('controls-chase').querySelectorAll('.intent')]
+    : [...el('bowlers').children];
+
+  const btn = buttons[n - 1];
+  if (!btn || btn.disabled) return;
+  e.preventDefault();
+  btn.click();
+});
 
 el('btn-start').onclick = beginRun;
 el('btn-start-back').onclick = loadMenu;

@@ -416,49 +416,165 @@ button:focus-visible, a:focus-visible {
   letter-spacing: -0.02em;
 }
 
-/* The over strip: the signature element.
+/* The Manhattan: the signature element.
  *
- * Twenty ruled boxes, one per over, drawn as a scorebook grid. Each box holds
- * that over's runs; the fill is what the over did to the win probability. The
- * same object is the progress bar while playing, the score at the end, and the
- * thing that gets pasted into a chat, which is why it is worth this much care.
+ * A bar per over, height in runs, colour in win probability, a notch for each
+ * wicket. It is the chart every scorecard in the sport draws and the one this
+ * project is named after, and it is the only thing on the play screen that
+ * shows the shape of an innings rather than its current state.
+ *
+ * What it replaced was twenty small squares with the runs printed in them. At
+ * the width of a column that is a two-digit number in fourteen pixels, which is
+ * a smudge rather than a number, and twenty smudges in a row say nothing about
+ * where the innings went. A bar survives being small: height reads at any size,
+ * and the silhouette of twenty of them is the powerplay, the middle and the
+ * death without a single label.
  */
 
-.strip-wrap { margin-top: 18px; }
+.charts { margin-top: var(--s4); }
 
-.strip {
+.manhattan { margin: 0 0 var(--s3); }
+
+.manhattan figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.mh-total {
+  letter-spacing: 0.04em;
+  color: var(--dim);
+  font-weight: 600;
+}
+
+.mh-plot {
   display: grid;
   grid-template-columns: repeat(20, 1fr);
   gap: 2px;
-  border: 1px solid var(--rule);
-  padding: 2px;
-  background: var(--rule);
+  height: 78px;
+  padding-top: 12px;
+  /* A baseline, because bars without one are floating rectangles. */
+  border-bottom: 1px solid var(--rule);
 }
 
-.strip + .strip { margin-top: 4px; }
-
-.box {
-  aspect-ratio: 1 / 1.5;
-  display: grid;
-  place-items: center;
-  background: var(--panel);
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--faint);
-  transition: background-color var(--calm) var(--ease), color var(--calm) var(--ease);
+.mh-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
-.box.good  { background: var(--gain);  color: #10200F; }
-.box.level { background: var(--level); color: #211803; }
-.box.bad   { background: var(--loss);  color: #FCEDEA; }
-
-/* The over about to be bowled. A hollow box with a bright rule reads as "here"
- * without competing with the coloured overs already played. */
-.box.now {
+.mh-bar {
+  position: relative;
+  width: 100%;
   background: var(--panel2);
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1.5px var(--ink);
+  transition: height var(--calm) var(--ease), background-color var(--calm) var(--ease);
 }
+
+.mh-col.good .mh-bar  { background: var(--gain); }
+.mh-col.level .mh-bar { background: var(--level); }
+.mh-col.bad .mh-bar   { background: var(--loss); }
+
+/* The over about to be bowled: an empty column with a lit floor, which reads as
+ * "here" without competing with the overs already played. */
+.mh-col.now .mh-bar {
+  height: 3px !important;
+  background: var(--ink);
+}
+
+/* The runs, over the bar rather than in it, so the figure never has to fit
+ * inside a column that may be three pixels tall. */
+.mh-runs {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dim);
+  line-height: 1;
+}
+
+.mh-col.over-scale .mh-runs { color: var(--ink); }
+
+/* A wicket, drawn across the bar as a scorer would rule it. */
+.mh-wkt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(2px + var(--n) * 4px);
+  height: 1.5px;
+  background: var(--board);
+  opacity: 0.85;
+}
+
+.mh-key {
+  margin: 0;
+  font-size: 11px;
+  color: var(--faint);
+  font-family: var(--face-txt);
+}
+
+.k-good { color: var(--gain); font-weight: 400; }
+.k-bad  { color: var(--loss); font-weight: 400; }
+
+/* The bowling card --------------------------------------------------------
+ *
+ * Overs, runs, wickets and economy. The game asks for a bowler every over and
+ * used to show only how many overs each had left, which is the least
+ * interesting of the four numbers a captain has in front of them.
+ */
+.bowling {
+  width: 100%;
+  margin-top: var(--s4);
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.bowling caption {
+  margin-bottom: 5px;
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.bowling th,
+.bowling td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+}
+
+.bowling thead th {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  border-bottom-color: var(--dim);
+}
+
+.bowling tbody th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink);
+  /* The club tint, as the same three-pixel edge used on a pick card. */
+  border-left: 3px solid color-mix(in srgb, var(--tint, transparent) 60%, transparent);
+  padding-left: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  width: 100%;
+}
+
+.bowling td { color: var(--dim); font-variant-numeric: tabular-nums; }
+.bowling tbody tr td:nth-child(4) { color: var(--ink); font-weight: 700; }
 
 /* Over ------------------------------------------------------------------- */
 
@@ -594,12 +710,87 @@ button:focus-visible, a:focus-visible {
 
 /* Result ------------------------------------------------------------------ */
 
+/* The result --------------------------------------------------------------
+ *
+ * This is the payoff, and it used to be a sentence, a block of emoji and three
+ * small numbers. The game is two innings, so the result leads with the two
+ * innings: whether each was won, by what margin, and what the choices in it
+ * were worth. The margin in particular was never shown anywhere, and holding a
+ * target by one run is a different afternoon from holding it by forty.
+ */
+.halves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.half {
+  padding: var(--s3) var(--s3) var(--s3) calc(var(--s3) - 3px);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  background: var(--panel);
+  border-top-color: var(--lip);
+}
+
+.half.won  { border-left-color: var(--gain); }
+.half.lost { border-left-color: var(--loss); }
+
+.half-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+}
+
+.half-mark {
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.half.won .half-mark  { color: var(--gain); }
+.half.lost .half-mark { color: var(--loss); }
+
+.half-line {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* The decision score is the number this game is actually about, so it is the
+ * largest thing on the screen rather than one of three equal cells. */
+.verdict-figure {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule);
+}
+
+.big-figure {
+  display: block;
+  margin: var(--s1) 0 var(--s2);
+  font-size: 66px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.big-figure.good  { color: var(--gain); }
+.big-figure.bad   { color: var(--loss); }
+.big-figure.level { color: var(--ink); }
+
+.verdict-figure .prose { margin: 0; max-width: 44ch; }
+
 .result-verdict {
-  margin: 8px 0 18px;
+  margin: var(--s2) 0 0;
+  text-wrap: balance;
   font-family: var(--face-txt);
-  font-size: 27px;
+  font-size: 30px;
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .share {
@@ -616,9 +807,9 @@ button:focus-visible, a:focus-visible {
 
 .result-figures {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--gap);
-  margin-top: 18px;
+  margin-top: var(--s4);
 }
 
 .result-figures > div {
@@ -661,7 +852,8 @@ button:focus-visible, a:focus-visible {
   .target-figure { font-size: 56px; }
   .sb-main { font-size: 36px; }
   .bowlers { grid-template-columns: 1fr; }
-  .box { font-size: 9px; }
+  .mh-runs { font-size: 8px; }
+  .mh-plot { height: 64px; }
 }
 
 /* Reduced motion.
@@ -858,23 +1050,6 @@ button:focus-visible, a:focus-visible {
 .phase-banner b { color: var(--ink); }
 .phase-banner.batting { border-left-color: var(--level); }
 
-.strip-row { display: flex; align-items: center; gap: 8px; }
-.strip-row + .strip-row { margin-top: 4px; }
-.strip-row .strip { flex: 1; }
-
-.strip-label {
-  width: 30px;
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  color: var(--faint);
-}
-
-.strip-key {
-  margin: 8px 0 0;
-  font-size: 11px;
-  color: var(--faint);
-  font-family: var(--face-txt);
-}
 
 @media (max-width: 380px) {
   .picks { grid-template-columns: 1fr; }
@@ -1045,7 +1220,7 @@ button:focus-visible, a:focus-visible {
   100% { transform: scale(1); }
 }
 
-.box.big { animation: swell 380ms ease-out; }
+.mh-col.big .mh-bar { animation: swell 420ms var(--ease); transform-origin: bottom; }
 
 
 /* Names and teams ---------------------------------------------------------
@@ -1237,7 +1412,7 @@ button:focus-visible, a:focus-visible {
    * more vertical room than horizontal here, so the five cards stack. */
   .bowlers { grid-template-columns: 1fr; }
 
-  /* Twenty boxes in a 360px column are four pixels wide, which is a barcode.
-   * Two rows of ten is legible and still reads as an innings. */
-  .play-side .strip { grid-template-columns: repeat(10, 1fr); }
+  /* A bar chart is readable at fourteen pixels a column in a way that a boxed
+   * number never was, so both innings stay on one row of twenty here. */
+  .play-side .mh-plot { height: 66px; }
 }

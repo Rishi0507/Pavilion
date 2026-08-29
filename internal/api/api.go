@@ -564,23 +564,29 @@ func bearer(r *http.Request) string {
 
 // FinishResponse is the share card.
 type FinishResponse struct {
-	Mode         string         `json:"mode"`
-	Counts       bool           `json:"counts"`
-	Date         string         `json:"date"`
-	Target       int            `json:"target"`
-	Defended     bool           `json:"defended"`
-	Chased       bool           `json:"chased"`
-	DefendGrid   []string       `json:"defend_grid"`
-	ChaseGrid    []string       `json:"chase_grid"`
-	DefendMargin int            `json:"defend_margin"`
-	ChaseMargin  int            `json:"chase_margin"`
-	DefendScore  float64        `json:"defend_score"`
-	ChaseScore   float64        `json:"chase_score"`
-	TotalScore   float64        `json:"total_score"`
-	Percentile   float64        `json:"percentile"`
-	Streak       int            `json:"streak"`
-	Share        string         `json:"share"`
-	Day          store.DayStats `json:"day"`
+	Mode       string   `json:"mode"`
+	Counts     bool     `json:"counts"`
+	Date       string   `json:"date"`
+	Target     int      `json:"target"`
+	Defended   bool     `json:"defended"`
+	Chased     bool     `json:"chased"`
+	DefendGrid []string `json:"defend_grid"`
+	ChaseGrid  []string `json:"chase_grid"`
+	// A margin is runs when a side fell short and wickets in hand when it got
+	// there, because those are the two ways cricket reports a result and
+	// neither substitutes for the other. Reporting only the runs meant a chase
+	// that succeeded was described as "short by 0 runs".
+	DefendMargin     int            `json:"defend_margin"`
+	DefendMarginWkts int            `json:"defend_margin_wkts"`
+	ChaseMargin      int            `json:"chase_margin"`
+	ChaseMarginWkts  int            `json:"chase_margin_wkts"`
+	DefendScore      float64        `json:"defend_score"`
+	ChaseScore       float64        `json:"chase_score"`
+	TotalScore       float64        `json:"total_score"`
+	Percentile       float64        `json:"percentile"`
+	Streak           int            `json:"streak"`
+	Share            string         `json:"share"`
+	Day              store.DayStats `json:"day"`
 }
 
 type finishRequest struct {
@@ -623,6 +629,10 @@ func (s *Server) handleFinish(w http.ResponseWriter, r *http.Request) {
 		DefendMargin: run.DefendResult.MarginRuns,
 		ChaseMargin:  run.ChaseResult.MarginRuns,
 	}
+	// The wickets side of each margin is reported but not recorded: it is how
+	// the result reads on the day, and nothing that is kept needs it.
+	defendMarginWkts := run.DefendResult.MarginWkts
+	chaseMarginWkts := run.ChaseResult.MarginWkts
 	date := run.Date
 	target := int(run.State.Puzzle.Target)
 	defendGrid := gradesOf(run.DefendOvers)
@@ -658,22 +668,24 @@ func (s *Server) handleFinish(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := FinishResponse{
-		Mode:         mode,
-		Counts:       counts,
-		Date:         date,
-		Target:       target,
-		Defended:     res.Defended,
-		Chased:       res.Chased,
-		DefendGrid:   defendGrid,
-		ChaseGrid:    chaseGrid,
-		DefendMargin: res.DefendMargin,
-		ChaseMargin:  res.ChaseMargin,
-		DefendScore:  defendScore,
-		ChaseScore:   chaseScore,
-		TotalScore:   defendScore + chaseScore,
-		Percentile:   pct,
-		Streak:       streak,
-		Day:          day,
+		Mode:             mode,
+		Counts:           counts,
+		Date:             date,
+		Target:           target,
+		Defended:         res.Defended,
+		Chased:           res.Chased,
+		DefendGrid:       defendGrid,
+		ChaseGrid:        chaseGrid,
+		DefendMargin:     res.DefendMargin,
+		DefendMarginWkts: defendMarginWkts,
+		ChaseMargin:      res.ChaseMargin,
+		ChaseMarginWkts:  chaseMarginWkts,
+		DefendScore:      defendScore,
+		ChaseScore:       chaseScore,
+		TotalScore:       defendScore + chaseScore,
+		Percentile:       pct,
+		Streak:           streak,
+		Day:              day,
 	}
 	resp.Share = ShareText(resp)
 	writeJSON(w, http.StatusOK, resp)

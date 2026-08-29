@@ -158,17 +158,31 @@
       <div class="sb-meter" aria-hidden="true"><span id="sb-meter-fill"></span></div>
     </div>
 
-    <div class="strip-wrap">
-      <div class="strip-row">
-        <span class="strip-label">BOWL</span>
-        <div class="strip" id="strip-defend" aria-label="Bowling innings, over by over"></div>
-      </div>
-      <div class="strip-row" id="strip-chase-row" hidden>
-        <span class="strip-label">BAT</span>
-        <div class="strip" id="strip-chase" aria-label="Batting innings, over by over"></div>
-      </div>
-      <p class="strip-key">green = the over helped you · red = it hurt</p>
+    <!-- The Manhattan: a bar for every over, which is the chart this project
+         is named after and the one every scorecard in the sport draws. -->
+    <div class="charts">
+      <figure class="manhattan" id="mh-defend-wrap">
+        <figcaption><span class="mh-side">THEY BATTED</span><span class="mh-total" id="mh-defend-total"></span></figcaption>
+        <div class="mh-plot" id="mh-defend" aria-label="Bowling innings, runs per over"></div>
+      </figure>
+      <figure class="manhattan" id="mh-chase-wrap" hidden>
+        <figcaption><span class="mh-side">YOU BATTED</span><span class="mh-total" id="mh-chase-total"></span></figcaption>
+        <div class="mh-plot" id="mh-chase" aria-label="Batting innings, runs per over"></div>
+      </figure>
+      <p class="mh-key">
+        bar height is runs &middot; <b class="k-good">green</b> helped you &middot;
+        <b class="k-bad">red</b> hurt &middot; a notch is a wicket
+      </p>
     </div>
+
+    <!-- The bowling card, which is the thing a scorer would actually keep. -->
+    <table class="bowling" id="bowling-card" hidden>
+      <caption>BOWLING</caption>
+      <thead>
+        <tr><th scope="col">Bowler</th><th scope="col">O</th><th scope="col">R</th><th scope="col">W</th><th scope="col">Econ</th></tr>
+      </thead>
+      <tbody id="bowling-rows"></tbody>
+    </table>
 
     </div>
 
@@ -201,13 +215,13 @@
     <div class="balls" id="balls" aria-live="polite"></div>
 
     <div id="controls-defend">
-      <h2 class="rule-heading">Who bowls this over?</h2>
+      <h2 class="rule-heading">Who bowls this over? <span class="hint">keys 1&ndash;5</span></h2>
       <div class="bowlers" id="bowlers"></div>
     </div>
 
     <div id="controls-chase" hidden>
       <h2 class="rule-heading">
-        How do you play this over?
+        How do you play this over? <span class="hint">keys 1&ndash;3</span>
         <span class="tokens" id="tokens" aria-label="attacking overs left"></span>
       </h2>
       <div class="intents">
@@ -225,20 +239,51 @@
   <section class="card" id="screen-result" hidden>
     <h2 class="result-verdict" id="result-verdict">—</h2>
 
-    <pre class="share" id="share">—</pre>
+    <!-- The two halves, side by side, because the game is two halves and the
+         result was previously only a sentence. -->
+    <div class="halves">
+      <div class="half" id="half-defend">
+        <span class="half-label">DEFENDING</span>
+        <span class="half-mark" id="half-defend-mark">—</span>
+        <span class="half-line" id="half-defend-line"></span>
+      </div>
+      <div class="half" id="half-chase">
+        <span class="half-label">CHASING</span>
+        <span class="half-mark" id="half-chase-mark">—</span>
+        <span class="half-line" id="half-chase-line"></span>
+      </div>
+    </div>
+
+    <div class="charts" id="result-charts">
+      <figure class="manhattan">
+        <figcaption><span class="mh-side">THEY BATTED</span><span class="mh-total" id="mh-r-defend-total"></span></figcaption>
+        <div class="mh-plot" id="mh-r-defend"></div>
+      </figure>
+      <figure class="manhattan">
+        <figcaption><span class="mh-side">YOU BATTED</span><span class="mh-total" id="mh-r-chase-total"></span></figcaption>
+        <div class="mh-plot" id="mh-r-chase"></div>
+      </figure>
+    </div>
+
+    <div class="verdict-figure">
+      <span class="label">DECISION SCORE</span>
+      <span class="big-figure" id="result-score">—</span>
+      <p class="prose subtle" id="score-explain">
+        This rates your choices, not your luck. It compares what you picked
+        against what else was available, before the ball was bowled &mdash; so a
+        good score and a loss can happen on the same day.
+      </p>
+    </div>
 
     <div class="result-figures">
-      <div><span class="label">DECISION SCORE</span><span class="figure" id="result-score">—</span></div>
       <div><span class="label">PERCENTILE</span><span class="figure" id="result-pct">—</span></div>
       <div><span class="label">STREAK</span><span class="figure" id="result-streak">—</span></div>
     </div>
 
-    <p class="prose subtle" id="score-explain">
-      The decision score rates your choices, not your luck: it compares what you
-      picked against what else was available, before the ball was bowled.
-    </p>
-
     <p class="prose" id="result-day"></p>
+
+    <h3 class="rule-heading">Share</h3>
+    <pre class="share" id="share">—</pre>
 
     <div class="result-actions">
       <button class="primary" id="btn-copy">Copy result</button>
