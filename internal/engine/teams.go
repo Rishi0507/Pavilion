@@ -105,3 +105,57 @@ func firstTwo(s string) string {
 	}
 	return string(r)
 }
+
+// Franchise colours.
+//
+// A tint only, and never a crest or a wordmark. What a club wears is not the
+// same kind of property as its badge: the colour places a player at a glance,
+// which is the whole job here, and it does it without reproducing anything that
+// belongs to anybody. These are deliberately muted away from the broadcast
+// versions, both so they sit on a warm dark board without shouting and so that
+// no card reads as an official one.
+//
+// Every value is a hue that a supporter would name correctly with no logo
+// present: Chennai yellow, Mumbai blue, Kolkata purple, Bangalore red.
+var franchiseColour = map[string]string{
+	"Chennai Super Kings":         "#C9A227",
+	"Mumbai Indians":              "#3C6DA8",
+	"Kolkata Knight Riders":       "#7A5CA8",
+	"Royal Challengers Bengaluru": "#C0473C",
+	"Sunrisers Hyderabad":         "#D07A34",
+	"Delhi Capitals":              "#4272B8",
+	"Punjab Kings":                "#C2453F",
+	"Rajasthan Royals":            "#C55A8E",
+	"Lucknow Super Giants":        "#3E8FA8",
+	"Gujarat Titans":              "#5C7C99",
+	"Deccan Chargers":             "#4A6E8C",
+	"Kochi Tuskers Kerala":        "#8A5FA0",
+	"Pune Warriors":               "#4C7FB5",
+	"Rising Pune Supergiant":      "#B0555A",
+	"Gujarat Lions":               "#C87A45",
+}
+
+// TeamColour returns the tint for a side, or an empty string for one with no
+// colour on record, so the caller falls back to the board's own palette rather
+// than inventing something.
+func TeamColour(name string) string {
+	return franchiseColour[CanonicalTeam(name)]
+}
+
+// shortToFull inverts the abbreviation table, so a player carrying only a short
+// code can still be coloured.
+var shortToFull = func() map[string]string {
+	m := make(map[string]string, len(franchiseShort))
+	for full, short := range franchiseShort {
+		m[short] = full
+	}
+	return m
+}()
+
+// TeamColourShort returns the tint for an abbreviated side.
+func TeamColourShort(short string) string {
+	if full, ok := shortToFull[short]; ok {
+		return franchiseColour[full]
+	}
+	return ""
+}

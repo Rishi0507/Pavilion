@@ -137,6 +137,10 @@
   <!-- Play -->
   <section id="screen-play" hidden>
 
+    <!-- The board: everything you read. On a wide screen it parks itself
+         beside the choices and stays put, so the score does not scroll away
+         the moment you go to pick a bowler. -->
+    <div class="play-side">
     <p class="phase-banner" id="phase-banner">YOU ARE BOWLING · stop them reaching the target</p>
 
     <div class="scoreboard" id="scoreboard-wrap">
@@ -166,6 +170,10 @@
       <p class="strip-key">green = the over helped you · red = it hurt</p>
     </div>
 
+    </div>
+
+    <!-- The choices: everything you do. -->
+    <div class="play-main">
     <div class="over-head">
       <span class="over-no" id="over-no">OVER 1 <span class="of-twenty">of 20</span></span>
     </div>
@@ -210,6 +218,7 @@
     </div>
 
     <p class="handover" id="handover" hidden></p>
+    </div>
   </section>
 
   <!-- Result -->

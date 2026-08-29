@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -413,4 +414,56 @@ func TestParseIntent(t *testing.T) {
 			t.Errorf("parseIntent(%q) = %v, want %v", tc.in, got, tc.want)
 		}
 	}
+}
+
+// The situation shown on the selection screen must be the one played.
+//
+// It was not. The target and the ground were drawn when the draft screen was
+// requested and drawn again when the side was submitted, so a player picked a
+// team against one stadium and a stated score, and then walked out at a
+// different stadium chasing a different number. The two draws were independent
+// and neither knew about the other.
+func TestDraftPlaysTheSituationItShowed(t *testing.T) {
+	ts, _ := harness(t)
+	defer ts.Close()
+
+	var view DraftView
+	if code := do(t, ts, "GET", "/api/v1/draft", "", nil, &view); code != http.StatusOK {
+		t.Fatalf("draft returned %d", code)
+	}
+	if view.SituationID == "" {
+		t.Fatal("the draft screen named no situation, so none can be played")
+	}
+
+	// The cheapest legal side, which is all this needs.
+	bowlers := cheapestIDs(view.Bowlers, engine.SquadBowlers)
+	batters := cheapestIDs(view.Batters, engine.SquadBatters)
+
+	var run StartResponse
+	code := do(t, ts, "POST", "/api/v1/run", "", startRequest{
+		Mode:        ModeDraft,
+		BowlerIDs:   bowlers,
+		BatterIDs:   batters,
+		SituationID: view.SituationID,
+	}, &run)
+	if code != http.StatusOK {
+		t.Fatalf("starting the drafted run returned %d", code)
+	}
+
+	if run.Puzzle.Target != view.Target {
+		t.Errorf("picked a side against %d, played against %d", view.Target, run.Puzzle.Target)
+	}
+	if run.Puzzle.Venue != view.Venue {
+		t.Errorf("picked a side for %q, played at %q", view.Venue, run.Puzzle.Venue)
+	}
+}
+
+func cheapestIDs(pool []engine.Rated, n int) []uint16 {
+	sorted := append([]engine.Rated(nil), pool...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Cost < sorted[j].Cost })
+	out := make([]uint16, 0, n)
+	for i := 0; i < n && i < len(sorted); i++ {
+		out = append(out, uint16(sorted[i].ID))
+	}
+	return out
 }

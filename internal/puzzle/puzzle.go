@@ -386,6 +386,24 @@ func (p *Pool) Len() int {
 	return len(p.Situations)
 }
 
+// Find returns the situation with a given identifier.
+//
+// A situation has to be addressable, not merely drawable at random. The draft
+// screen shows the ground and the target before the side is picked, and then
+// has to play that same situation: drawing again at the point of play gave the
+// player one stadium to plan against and a different one to bat at.
+func (p *Pool) Find(id string) (Queued, bool) {
+	if p == nil || id == "" {
+		return Queued{}, false
+	}
+	for _, q := range p.Situations {
+		if q.Date == id {
+			return q, true
+		}
+	}
+	return Queued{}, false
+}
+
 // Pick returns one situation, avoiding the one just played so a practice run
 // never immediately repeats itself.
 func (p *Pool) Pick(avoid string, r *rand.Rand) (Queued, bool) {

@@ -59,6 +59,7 @@ async function showGround(hostSelector, ground) {
     return;
   }
   panel?.classList.remove('no-stage');
+  panel?.style.setProperty('--tint', ground.colour || '');
   host.innerHTML = mod.groundSVG(ground);
 }
 
@@ -89,6 +90,7 @@ const state = {
   mode: 'daily',
   lastSituation: '',
   draft: null,
+  draftSituation: '',
   pickedBowlers: [],
   pickedBatters: [],
   busy: false,
@@ -129,7 +131,58 @@ function clearError() { el('error').hidden = true; }
 // curve everywhere. A page that slides its whole contents around on every tap
 // is tiring by the third puzzle, whereas no transition at all makes a single
 // long page feel like five unrelated ones.
-function show(name) {
+/* Routing --------------------------------------------------------------------
+ *
+ * The five screens are pushed onto the browser's history, so back and forward
+ * do what they look like they should. Without it, back from the middle of a
+ * game left the site entirely, which on a page that never navigates is a
+ * surprising way to lose a run.
+ *
+ * A run in progress is the one case that cannot simply be re-shown: its state
+ * lives on the server behind a token and a move counter, and re-entering it
+ * from a history entry would need the run replayed. So stepping back out of a
+ * game abandons it and returns to the menu, and stepping forward again offers
+ * the menu rather than pretending. That is honest, and the daily puzzle is
+ * still there to be started again.
+ */
+const RESUMABLE = { menu: true, draft: true, result: true };
+
+function route(name) {
+  switch (name) {
+    case 'draft': return loadDraft();
+    case 'result': return show('result');
+    default: return loadMenu();
+  }
+}
+
+window.addEventListener('popstate', (e) => {
+  // An entry this page pushed carries its screen. One it did not — a typed
+  // fragment, or a link into the middle of the site — carries nothing, so the
+  // fragment itself is read rather than defaulting to the menu and quietly
+  // ignoring where the reader asked to go.
+  const name = (e.state && e.state.screen) || (location.hash || '#menu').slice(1);
+  // A history entry for a screen that cannot be re-entered lands on the menu,
+  // and the entry is rewritten so a second back press does not retry it.
+  if (!RESUMABLE[name]) {
+    history.replaceState({ screen: 'menu' }, '', '#menu');
+    loadMenu();
+    return;
+  }
+  route(name);
+});
+
+function show(name, push = true) {
+  if (push) {
+    const entry = { screen: name };
+    // Replacing rather than pushing when the screen has not changed keeps the
+    // history from filling with duplicates of the play screen, which would
+    // otherwise gain an entry on every over.
+    if (history.state && history.state.screen === name) {
+      history.replaceState(entry, '', `#${name}`);
+    } else {
+      history.pushState(entry, '', `#${name}`);
+    }
+  }
   const target = `screen-${name}`;
   for (const id of ['screen-menu', 'screen-draft', 'screen-start', 'screen-play', 'screen-result']) {
     const node = el(id);
@@ -190,7 +243,7 @@ function showPuzzle(p) {
   p.attack.forEach((b, i) => {
     const li = document.createElement('li');
     li.style.setProperty('--i', String(i));
-    li.append(markTile(b), whoBlock(b.name, b.team, b.style));
+    li.append(markTile(b), whoBlock(b.name, b.team, b.style, b.colour));
     list.append(li);
   });
   show('start');
@@ -204,13 +257,17 @@ function markTile(p) {
   const tile = document.createElement('span');
   tile.className = 'mark';
   tile.textContent = p.mark || monogram(p.name);
+  // The club's colour, as a tint on the tile and nothing more. It places a
+  // player at a glance, which is the whole job; a crest would be somebody
+  // else's property and a full-colour card would read as an official one.
+  if (p.colour) tile.style.setProperty('--tint', p.colour);
   return tile;
 }
 
 // whoBlock is a name with the side they are known for underneath it. The team
 // is what places an unfamiliar name, especially now that the draft reaches back
 // to players who retired a decade ago.
-function whoBlock(name, team, sub) {
+function whoBlock(name, team, sub, colour) {
   const wrap = document.createElement('span');
   wrap.className = 'who';
 
@@ -225,6 +282,7 @@ function whoBlock(name, team, sub) {
     const badge = document.createElement('span');
     badge.className = 'team';
     badge.textContent = team;
+    if (colour) badge.style.setProperty('--tint', colour);
     under.append(badge);
   }
   if (sub) {
@@ -285,6 +343,9 @@ async function loadDraft() {
     updateBudget();
 
     const ground = d.ground || { name: d.venue };
+    // The situation is remembered so the side is played against the ground and
+    // the score it was picked against, rather than against a fresh draw.
+    state.draftSituation = d.situation_id || '';
     el('draft-target').textContent = d.target;
     fillGroundPlate('draft', ground);
 
@@ -347,6 +408,7 @@ function renderPicks(containerID, pool, picked, limit, budget) {
     cost.className = 'pick-cost';
     cost.textContent = `${p.cost} cr`;
 
+    if (p.colour) btn.style.setProperty('--tint', p.colour);
     btn.append(markTile(p), name, style, cost);
     // The card has room for an abbreviation only, so the hover carries the
     // reason for the price, which is the thing a picker actually wants.
@@ -507,9 +569,9 @@ function render(s) {
     `OVER ${Math.min(s.over + 1, 20)} <span class="of-twenty">of 20</span>`;
 
   setBatter('striker', s.striker, s.striker_team, s.striker_mark,
-    s.striker_runs, s.striker_balls);
+    s.striker_runs, s.striker_balls, s.striker_colour);
   setBatter('nonstriker', s.non_striker, s.non_striker_team, s.non_striker_mark,
-    s.non_striker_runs, s.non_striker_balls);
+    s.non_striker_runs, s.non_striker_balls, s.non_striker_colour);
 
   el('sb-need-label').textContent = chasing ? 'YOU NEED' : 'THEY NEED';
   el('sb-need').textContent = `${s.runs_needed} off ${s.balls_left}`;
@@ -538,8 +600,10 @@ function render(s) {
   else renderBowlers(s);
 }
 
-function setBatter(which, name, team, mark, runs, balls) {
-  el(`mark-${which}`).textContent = mark || monogram(name);
+function setBatter(which, name, team, mark, runs, balls, colour) {
+  const tile = el(`mark-${which}`);
+  tile.textContent = mark || monogram(name);
+  tile.style.setProperty('--tint', colour || '');
   el(`name-${which}`).textContent = name || '—';
   el(`team-${which}`).textContent = team || '';
   el(`figs-${which}`).textContent = name ? `${runs} (${balls})` : '';
@@ -571,7 +635,7 @@ function renderBowlers(s) {
     }
     card.setAttribute('aria-label',
       `${b.name}, ${b.style}, ${used} of 4 overs bowled`);
-    card.append(markTile(b), whoBlock(b.name, b.team, b.style), pips);
+    card.append(markTile(b), whoBlock(b.name, b.team, b.style, b.colour), pips);
     wrap.append(card);
   });
 }
@@ -764,6 +828,7 @@ el('btn-draft-start').onclick = () => openRun({
   mode: 'draft',
   bowler_ids: state.pickedBowlers,
   batter_ids: state.pickedBatters,
+  situation_id: state.draftSituation,
 });
 
 // After a game: a different situation, the same one again, or back out.
@@ -775,4 +840,8 @@ el('btn-same').onclick = () => {
 };
 el('btn-menu').onclick = loadMenu;
 
-loadMenu();
+// The first screen replaces the entry the browser already has rather than
+// adding one, so a single back press leaves the site as it would from any
+// other page instead of stepping through an empty entry first.
+history.replaceState({ screen: 'menu' }, '', location.hash || '#menu');
+route((location.hash || '#menu').slice(1));

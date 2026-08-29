@@ -1161,3 +1161,83 @@ button:focus-visible, a:focus-visible {
   .mode:hover, .intent:not(:disabled):hover,
   .bowler:not(:disabled):hover, .pick:hover:not(:disabled) { transform: none; }
 }
+
+/* Club colour -------------------------------------------------------------
+ *
+ * A tint, carried on --tint and used nowhere without a fallback, so a player
+ * or a ground with no club on record simply looks like the rest of the board.
+ *
+ * It is deliberately an edge and a wash rather than a fill. The point is to
+ * place somebody at a glance — Rohit Sharma is blue, Dhoni is yellow — and a
+ * card printed in full club colour would read as an official one, which it is
+ * not.
+ */
+.mark {
+  border-color: color-mix(in srgb, var(--tint, transparent) 55%, var(--rule));
+  background: color-mix(in srgb, var(--tint, transparent) 14%, var(--panel2));
+  color: color-mix(in srgb, var(--tint, transparent) 45%, var(--dim));
+}
+
+#bat-striker .mark { color: var(--ink); }
+
+.team {
+  border-color: color-mix(in srgb, var(--tint, transparent) 45%, var(--rule));
+  color: color-mix(in srgb, var(--tint, transparent) 55%, var(--dim));
+}
+
+/* On a pick card the tint runs down the left edge, which is enough to sort a long
+ * list by club without any of it shouting. */
+.pick { border-left: 3px solid color-mix(in srgb, var(--tint, transparent) 60%, var(--rule)); }
+.pick.on { border-left-color: color-mix(in srgb, var(--tint, transparent) 85%, var(--ink)); }
+
+.ground { border-color: color-mix(in srgb, var(--tint, transparent) 35%, var(--rule)); }
+
+/* The play screen, in two columns -----------------------------------------
+ *
+ * On a phone this is one column and reads top to bottom: what happened, then
+ * what to do about it. On anything wider that ordering costs a scroll every
+ * single over, because the score is at the top and the bowlers are at the
+ * bottom, and a player ends up moving between them forty times a game.
+ *
+ * So on a wide screen the board moves to the right and sticks there while the
+ * choices scroll on the left. Both halves are visible at the moment the
+ * decision is made, which is the only moment that matters.
+ */
+@media (min-width: 940px) {
+  body { max-width: none; }
+
+  .masthead,
+  main#app > section,
+  .colophon > p { max-width: 680px; margin-inline: auto; }
+
+  #screen-play {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: var(--s5);
+    align-items: start;
+    max-width: 1080px;
+  }
+
+  .play-main { grid-column: 1; grid-row: 1; min-width: 0; }
+
+  .play-side {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: var(--s3);
+    min-width: 0;
+  }
+
+  /* In the side column the board is the top element, so its own top margin is
+   * not wanted. */
+  .play-side .phase-banner { margin-top: 0; }
+
+  /* Two bowler cards side by side in the narrower column truncated every name
+   * to "M Theek…" and broke "right-arm pace" over three lines. There is far
+   * more vertical room than horizontal here, so the five cards stack. */
+  .bowlers { grid-template-columns: 1fr; }
+
+  /* Twenty boxes in a 360px column are four pixels wide, which is a barcode.
+   * Two rows of ten is legible and still reads as an innings. */
+  .play-side .strip { grid-template-columns: repeat(10, 1fr); }
+}

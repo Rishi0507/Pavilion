@@ -26,9 +26,10 @@ type Rated struct {
 	Name   string          `json:"name"`
 	Style  string          `json:"style"`
 	Hand   string          `json:"hand"`
-	Team   string          `json:"team"`  // the side they are best known for
-	Years  string          `json:"years"` // the seasons they played across
-	Mark   string          `json:"mark"`  // initials, for the monogram tile
+	Team   string          `json:"team"`   // the side they are best known for
+	Colour string          `json:"colour"` // that side's tint, for the card edge
+	Years  string          `json:"years"`  // the seasons they played across
+	Mark   string          `json:"mark"`   // initials, for the monogram tile
 	Cost   int             `json:"cost"`
 	Rating float64         `json:"rating"` // 0 to 100, higher is better
 	Note   string          `json:"note"`   // a plain-language reason for the price
@@ -223,7 +224,7 @@ func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 		p := e.player(id)
 		bowl = append(bowl, Rated{
 			ID: id, Name: p.Name, Style: ClassName(p.Class),
-			Team: p.Team, Years: p.Years, Mark: Monogram(p.Name),
+			Team: p.Team, Colour: TeamColourShort(p.Team), Years: p.Years, Mark: Monogram(p.Name),
 			Cost: costOf(q), Rating: math.Round(q * 100), Note: note,
 		})
 	}
@@ -244,7 +245,7 @@ func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 		p := e.player(id)
 		bat = append(bat, Rated{
 			ID: id, Name: p.Name, Hand: HandName(p.Hand),
-			Team: p.Team, Years: p.Years, Mark: Monogram(p.Name),
+			Team: p.Team, Colour: TeamColourShort(p.Team), Years: p.Years, Mark: Monogram(p.Name),
 			Cost: costOf(q), Rating: math.Round(q * 100), Note: note,
 		})
 	}

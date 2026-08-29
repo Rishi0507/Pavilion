@@ -38,6 +38,8 @@ type Engine struct {
 	// delivery table and never change afterwards.
 	teams []string
 	years []string
+
+	recentVenues []corpus.VenueID
 }
 
 // Paths locates every artifact the engine needs.

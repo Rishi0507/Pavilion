@@ -144,8 +144,8 @@ type PuzzleView struct {
 	Venue     string        `json:"venue"`
 	Ground    engine.Ground `json:"ground"`
 	Attack    []PlayerView  `json:"attack"`
-	Batting   []PlayerView `json:"batting"`
-	Validated bool         `json:"validated"`
+	Batting   []PlayerView  `json:"batting"`
+	Validated bool          `json:"validated"`
 
 	// Mode tells the page which of the three games this is, and Counts whether
 	// the result will join the day's shared numbers.
@@ -156,20 +156,22 @@ type PuzzleView struct {
 
 // PlayerView is one cricketer as the client sees them.
 type PlayerView struct {
-	Index int    `json:"index"`
-	Name  string `json:"name"`
-	Style string `json:"style"`
-	Hand  string `json:"hand"`
-	Team  string `json:"team"`
-	Years string `json:"years"`
-	Mark  string `json:"mark"`
+	Index  int    `json:"index"`
+	Name   string `json:"name"`
+	Style  string `json:"style"`
+	Hand   string `json:"hand"`
+	Team   string `json:"team"`
+	Colour string `json:"colour"`
+	Years  string `json:"years"`
+	Mark   string `json:"mark"`
 }
 
 func viewOfPlayer(i int, p sim.Player) PlayerView {
 	return PlayerView{
 		Index: i, Name: p.Name,
 		Style: engine.ClassName(p.Class), Hand: engine.HandName(p.Hand),
-		Team: p.Team, Years: p.Years, Mark: engine.Monogram(p.Name),
+		Team: p.Team, Colour: engine.TeamColourShort(p.Team),
+		Years: p.Years, Mark: engine.Monogram(p.Name),
 	}
 }
 
@@ -289,24 +291,26 @@ type StateView struct {
 	// Both batters are reported, not only the one on strike. A partnership is
 	// two people, and which of them is at the other end matters to the next
 	// decision.
-	Striker         string   `json:"striker"`
-	StrikerTeam     string   `json:"striker_team"`
-	StrikerMark     string   `json:"striker_mark"`
-	StrikerBalls    int      `json:"striker_balls"`
-	StrikerRuns     int      `json:"striker_runs"`
-	NonStriker      string   `json:"non_striker"`
-	NonStrikerTeam  string   `json:"non_striker_team"`
-	NonStrikerMark  string   `json:"non_striker_mark"`
-	NonStrikerBalls int      `json:"non_striker_balls"`
-	NonStrikerRuns  int      `json:"non_striker_runs"`
-	LegalBowlers    []int    `json:"legal_bowlers"`
-	OversBowled     []int    `json:"overs_bowled"`
-	AttacksLeft     int      `json:"attacks_left"`
-	WinProbability  float64  `json:"win_probability"`
-	Done            bool     `json:"done"`
-	Decisions       int      `json:"decisions"`
-	DefendGrid      []string `json:"defend_grid"`
-	ChaseGrid       []string `json:"chase_grid"`
+	Striker          string   `json:"striker"`
+	StrikerTeam      string   `json:"striker_team"`
+	StrikerColour    string   `json:"striker_colour"`
+	StrikerMark      string   `json:"striker_mark"`
+	StrikerBalls     int      `json:"striker_balls"`
+	StrikerRuns      int      `json:"striker_runs"`
+	NonStriker       string   `json:"non_striker"`
+	NonStrikerTeam   string   `json:"non_striker_team"`
+	NonStrikerColour string   `json:"non_striker_colour"`
+	NonStrikerMark   string   `json:"non_striker_mark"`
+	NonStrikerBalls  int      `json:"non_striker_balls"`
+	NonStrikerRuns   int      `json:"non_striker_runs"`
+	LegalBowlers     []int    `json:"legal_bowlers"`
+	OversBowled      []int    `json:"overs_bowled"`
+	AttacksLeft      int      `json:"attacks_left"`
+	WinProbability   float64  `json:"win_probability"`
+	Done             bool     `json:"done"`
+	Decisions        int      `json:"decisions"`
+	DefendGrid       []string `json:"defend_grid"`
+	ChaseGrid        []string `json:"chase_grid"`
 }
 
 func (s *Server) stateOf(run *session.Run) StateView {
@@ -338,10 +342,12 @@ func (s *Server) stateOf(run *session.Run) StateView {
 		on := st.Puzzle.Batting[st.Striker]
 		off := st.Puzzle.Batting[st.NonStriker]
 		v.Striker, v.StrikerTeam = on.Name, on.Team
+		v.StrikerColour = engine.TeamColourShort(on.Team)
 		v.StrikerMark = engine.Monogram(on.Name)
 		v.StrikerBalls = int(st.BallsFaced[st.Striker])
 		v.StrikerRuns = int(st.RunsScored[st.Striker])
 		v.NonStriker, v.NonStrikerTeam = off.Name, off.Team
+		v.NonStrikerColour = engine.TeamColourShort(off.Team)
 		v.NonStrikerMark = engine.Monogram(off.Name)
 		v.NonStrikerBalls = int(st.BallsFaced[st.NonStriker])
 		v.NonStrikerRuns = int(st.RunsScored[st.NonStriker])

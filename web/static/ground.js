@@ -55,7 +55,35 @@ const P = {
   shadow: '#2E4030',
 };
 
+/* The home club's colour, worked into the seats and the roof.
+ *
+ * A ground is not a neutral box to the people in it: Chepauk is yellow and the
+ * Wankhede is blue, and a drawing that ignores that is a diagram of an oval
+ * rather than a picture of a place. The tint goes into the stand fabric and
+ * nowhere near the grass, and it is mixed heavily with the base so it reads as
+ * a coloured stadium rather than as a flat wash of brand colour.
+ *
+ * Neutral venues and the grounds abroad have no resident club and are left in
+ * their own concrete.
+ */
+function mix(hex, base, amount) {
+  const h = (c) => parseInt(c, 16);
+  const a = [h(hex.slice(1, 3)), h(hex.slice(3, 5)), h(hex.slice(5, 7))];
+  const b = [h(base.slice(1, 3)), h(base.slice(3, 5)), h(base.slice(5, 7))];
+  const out = a.map((v, i) => Math.round(b[i] + (v - b[i]) * amount));
+  return '#' + out.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
 export function groundSVG(ground) {
+  // A per-call copy, because the tint differs by ground and the palette is
+  // shared.
+  const C = { ...P };
+  if (/^#[0-9a-fA-F]{6}$/.test(ground.colour || '')) {
+    C.standFar = mix(ground.colour, P.standFar, 0.5);
+    C.standNear = mix(ground.colour, P.standNear, 0.42);
+    C.standRoof = mix(ground.colour, P.standRoof, 0.3);
+  }
+
   const straight = ground.straight || 70;
   const square = ground.square || 64;
   const tiers = Math.max(1, Math.min(3, ground.tiers || 2));
@@ -84,7 +112,7 @@ export function groundSVG(ground) {
 
   const parts = [];
 
-  parts.push(`<defs>${defs()}</defs>`);
+  parts.push(`<defs>${defs(C)}</defs>`);
   parts.push(`<rect width="${W}" height="${H}" fill="url(#sky)"/>`);
   parts.push(horizon(cy, ry, rx));
 
@@ -96,7 +124,7 @@ export function groundSVG(ground) {
   }
 
   if (ground.roof && ground.roof !== 'none') {
-    parts.push(roof(cx, cy - lift, rx + depth, ry + depth * squash, ground.roof));
+    parts.push(roof(cx, cy - lift, rx + depth, ry + depth * squash, ground.roof, C));
   }
 
   parts.push(field(cx, cy, rx, ry));
@@ -119,7 +147,7 @@ export function groundSVG(ground) {
     '</svg>';
 }
 
-function defs() {
+function defs(C) {
   return `
     <linearGradient id="sky" x1="0" y1="0" x2="0.25" y2="1">
       <stop offset="0" stop-color="${P.skyHigh}"/>
@@ -134,8 +162,8 @@ function defs() {
     </linearGradient>
 
     <linearGradient id="tierFill" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0" stop-color="${P.standFar}"/>
-      <stop offset="1" stop-color="${P.standNear}"/>
+      <stop offset="0" stop-color="${C.standFar}"/>
+      <stop offset="1" stop-color="${C.standNear}"/>
     </linearGradient>
 
     <linearGradient id="castShadow" x1="0" y1="0" x2="0.85" y2="0.6">
@@ -200,7 +228,7 @@ function stand(cx, cy, rx, ry, tier, tiers) {
     </g>`;
 }
 
-function roof(cx, cy, rx, ry, kind) {
+function roof(cx, cy, rx, ry, kind, C) {
   const reach = kind === 'full' ? 0.86 : 0.92;
   return `
     <mask id="roofMask">
@@ -209,7 +237,7 @@ function roof(cx, cy, rx, ry, kind) {
     </mask>
     <g mask="url(#roofMask)">
       <ellipse cx="${r(cx)}" cy="${r(cy - ry * 0.06)}" rx="${r(rx * 1.03)}" ry="${r(ry * 1.03)}"
-               fill="${P.standRoof}" opacity="0.9"/>
+               fill="${C.standRoof}" opacity="0.9"/>
     </g>`;
 }
 

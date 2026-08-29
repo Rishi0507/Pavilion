@@ -45,6 +45,12 @@ type startRequest struct {
 
 	// Practice mode only: the situation just played, so the next one differs.
 	Avoid string `json:"avoid"`
+
+	// Draft mode only: the situation the selection screen displayed. The player
+	// picked a side against a stated target at a stated ground, so that is the
+	// one they must play; without it the server drew again and they arrived at a
+	// different stadium than the one they had planned for.
+	SituationID string `json:"situation_id"`
 }
 
 // DraftView is everything needed to pick a side.
@@ -58,13 +64,16 @@ type DraftView struct {
 	Target       int            `json:"target"`
 	Venue        string         `json:"venue"`
 	Ground       engine.Ground  `json:"ground"`
+	SituationID  string         `json:"situation_id"`
 }
 
 func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 	bowl, bat := s.Engine.DraftPool(0, 0)
-	target, venue := s.draftSituation()
+	sit := s.draftSituation("")
+	target, venue := sit.target, sit.venue
 
 	writeJSON(w, http.StatusOK, DraftView{
+		SituationID:  sit.id,
 		Bowlers:      bowl,
 		Batters:      bat,
 		BowlerBudget: engine.BowlerBudget,
@@ -77,19 +86,91 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// draftSituation picks the target and ground a drafted side will face.
+// draftSituation picks the target and ground a drafted side will face, or
+// recovers the one already shown.
 //
-// It comes from the validated pool when one exists, so the score is one that
-// has been shown to make a contest, rather than a number chosen because it
-// sounded about right.
-func (s *Server) draftSituation() (int, corpus.VenueID) {
-	if s.Pool.Len() > 0 {
-		if q, ok := s.Pool.Pick("", s.rng()); ok {
-			return int(q.Target), corpus.VenueID(q.VenueID)
-		}
-	}
-	return 190, 0
+// Passing an identifier returns that exact situation, which is what makes the
+// selection screen honest: the ground and the score a player planned against
+// are the ones they then play.
+//
+// The situations come from the validated pool where one exists. Their attacks
+// are discarded here, because in this mode the player supplies the bowling, but
+// the target and the ground are ones that have been shown to make a contest
+// rather than numbers that sounded about right.
+type situation struct {
+	id     string
+	target int
+	venue  corpus.VenueID
 }
+
+func (s *Server) draftSituation(id string) situation {
+	if q, ok := s.Pool.Find(id); ok {
+		return situation{q.Date, int(q.Target), corpus.VenueID(q.VenueID)}
+	}
+	if sit, ok := parseFreeSituation(id); ok {
+		return sit
+	}
+
+	r := s.rng()
+
+	// Draft mode is the one place the ground and the score can be drawn freely.
+	//
+	// A pooled situation is a validated tuple of target, attack, chasing side
+	// and venue, and its value is that the whole tuple was shown to make a
+	// contest. Here the player supplies the bowling, so the attack is discarded
+	// and the guarantee is void anyway; drawing only from the pool then bought
+	// nothing and cost every drafted game the same dozen grounds and the same
+	// dozen scores.
+	//
+	// So the target is drawn across the range the generator has found fair, and
+	// the ground from every venue in recent use. The player is picking a side
+	// against a stated problem either way, and the problem should not be the
+	// same one every time.
+	target := draftMinTarget + r.IntN(draftMaxTarget-draftMinTarget+1)
+
+	venue := corpus.VenueID(0)
+	if venues := s.Engine.RecentVenues(); len(venues) > 0 {
+		venue = venues[r.IntN(len(venues))]
+	}
+	return situation{freeSituationID(target, venue), target, venue}
+}
+
+// A freely drawn situation carries its own identity in its identifier.
+//
+// The selection screen has to be able to name the situation it displayed so
+// that the same one is played, and a drawn situation is not in any pool to be
+// looked up. Encoding the target and the ground into the identifier makes it
+// addressable without the server keeping a table of every draft screen anybody
+// has ever opened.
+//
+// Nothing here is trusted: both values are re-validated on the way back in, and
+// neither can express anything the free draw could not have produced anyway.
+func freeSituationID(target int, venue corpus.VenueID) string {
+	return fmt.Sprintf("free:%d:%d", target, venue)
+}
+
+func parseFreeSituation(id string) (situation, bool) {
+	var target, venue int
+	if _, err := fmt.Sscanf(id, "free:%d:%d", &target, &venue); err != nil {
+		return situation{}, false
+	}
+	if target < draftMinTarget || target > draftMaxTarget {
+		return situation{}, false
+	}
+	if venue < 0 || venue > 0xFE {
+		return situation{}, false
+	}
+	return situation{id, target, corpus.VenueID(venue)}, true
+}
+
+// The range of targets a drafted side may face. The generator's accepted days
+// cluster between 180 and 210, so this spans that and a little either side:
+// wide enough that two drafts rarely feel alike, narrow enough that every one
+// is still a game.
+const (
+	draftMinTarget = 172
+	draftMaxTarget = 214
+)
 
 func (s *Server) rng() *rand.Rand {
 	return rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0x9E3779B9))
@@ -147,7 +228,8 @@ func (s *Server) buildDraft(req startRequest) (*sim.Puzzle, sim.DailyKey, Mode, 
 		return nil, sim.DailyKey{}, ModeDraft, false, err
 	}
 
-	target, venue := s.draftSituation()
+	sit := s.draftSituation(req.SituationID)
+	target, venue := sit.target, sit.venue
 
 	// The batting order needs eleven names, and the player picks six, so the
 	// rest of the order is filled with the cheapest available. A side is more
