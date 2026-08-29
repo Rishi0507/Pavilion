@@ -30,70 +30,36 @@ function monogram(name) {
 }
 /* The ground ---------------------------------------------------------------
  *
- * A picture of the venue, rendered once on the client and then left alone. The
- * renderer hands back an image rather than a live canvas, so what sits on the
- * page is an <img> and the page can go idle the moment it has loaded.
- *
- * Images are cached by ground, because the same venue comes back every time the
- * daily puzzle is reopened and rendering it twice would be pure waste.
- *
- * The module is imported on demand. It carries three.js with it, which is by
- * far the largest thing the page can load, and somebody who only ever reads the
- * menu should never pay for it.
+ * A drawing of the venue, built from its own boundary lengths. It is vector and
+ * synchronous: no canvas, no WebGL, no dependency, nothing to wait for and
+ * nothing to fall back to. The module is still imported on demand, because the
+ * menu does not need it.
  */
-const groundImages = new Map();
-let stadiumModule;
+let groundModule;
 
-// ?stadium=off disables the ground entirely. Keeping the switch in the product
-// rather than in a scratch build means the page can always be reduced to the
-// part that matters, which is the puzzle, on a machine or a browser where the
-// render turns out to be a problem.
-const STADIUM_OFF = new URLSearchParams(location.search).get('stadium') === 'off';
+// ?ground=off hides the drawing. Keeping the switch in the product rather than
+// in a scratch build means the page can always be reduced to the part that
+// matters, which is the puzzle.
+const GROUND_OFF = new URLSearchParams(location.search).get('ground') === 'off';
 
-function loadStadium() {
-  if (STADIUM_OFF) return Promise.resolve(null);
-  if (!stadiumModule) {
-    stadiumModule = import('/static/stadium.js').catch(() => null);
-  }
-  return stadiumModule;
+function loadGround() {
+  if (GROUND_OFF) return Promise.resolve(null);
+  if (!groundModule) groundModule = import('/static/ground.js').catch(() => null);
+  return groundModule;
 }
 
 async function showGround(hostSelector, ground) {
   const panel = document.querySelector(hostSelector + ' .ground');
-  const host = document.querySelector(hostSelector + ' [data-stadium-host]');
+  const host = document.querySelector(hostSelector + ' [data-ground-host]');
   if (!host || !ground || !ground.name) return;
 
-  const fail = () => panel?.classList.add('no-stage');
-  if (STADIUM_OFF) return fail();
-
-  const key = `${ground.name}|${ground.straight}|${ground.square}|${ground.tiers}|${ground.roof}|${ground.lights}`;
-  let url = groundImages.get(key);
-
-  if (url === null) return fail(); // tried before, and it did not work
-  if (url === undefined) {
-    const mod = await loadStadium();
-    if (!mod) {
-      groundImages.set(key, null);
-      return fail();
-    }
-    // Let the screen paint before the render takes the main thread. The
-    // fixture, the attack and the button are what the reader wants first, and
-    // holding them back behind a picture would be exactly the wrong order.
-    await sleep(60);
-    // The panel's own size, so the render matches what will be shown.
-    const w = Math.max(host.clientWidth || 640, 320);
-    const h = Math.max(host.clientHeight || 360, 180);
-    url = await mod.renderGround(ground, w, h);
-    groundImages.set(key, url ?? null);
-    if (!url) return fail();
+  const mod = await loadGround();
+  if (!mod) {
+    panel?.classList.add('no-stage');
+    return;
   }
-
   panel?.classList.remove('no-stage');
-  const img = document.createElement('img');
-  img.className = 'stadium';
-  img.alt = `${ground.name}, seen from square of the wicket`;
-  img.src = url;
-  host.replaceChildren(img);
+  host.innerHTML = mod.groundSVG(ground);
 }
 
 // fillGroundPlate writes the ground's name and measurements alongside it. The
@@ -482,21 +448,29 @@ function paintStrip(id, grades, runs, currentOver) {
  */
 
 // roll counts an element from its current value to a new one.
-function roll(node, to, ms = 340) {
-  const from = Number(node.textContent.replace(/[^0-9-]/g, ''));
+function roll(node, to, suffix = '', ms = 340) {
+  const raw = node.textContent.replace(/[^0-9-]/g, '');
+  const from = raw === '' ? NaN : Number(raw);
+  const write = (v) => { node.textContent = v + suffix; };
+
   if (REDUCED || !Number.isFinite(from) || from === to || Math.abs(to - from) > 200) {
-    node.textContent = String(to);
+    write(to);
     return;
   }
+
+  // A token per animation, so a roll started by a later over cancels this one
+  // rather than the two fighting over the same element.
+  const token = (node.dataset.roll = String(Number(node.dataset.roll || 0) + 1));
   const started = performance.now();
   const step = (now) => {
+    if (node.dataset.roll !== token) return;
     const t = Math.min((now - started) / ms, 1);
     // Ease out: fast first, settling at the end, which is how a scoreboard
     // ticker behaves.
     const eased = 1 - Math.pow(1 - t, 3);
-    node.textContent = String(Math.round(from + (to - from) * eased));
+    write(Math.round(from + (to - from) * eased));
     if (t < 1) requestAnimationFrame(step);
-    else node.textContent = String(to);
+    else write(to);
   };
   requestAnimationFrame(step);
 }
@@ -546,10 +520,7 @@ function render(s) {
   // paint the very first reading green as though it had risen from nothing.
   const previous = wpNode.textContent.replace(/[^0-9-]/g, '');
   const was = previous === '' ? NaN : Number(previous);
-  roll(wpNode, wp);
-  // The suffix is restored after the count finishes, so the roll animates a
-  // plain number and the reader still sees a percentage.
-  setTimeout(() => { wpNode.textContent = `${wp}%`; }, REDUCED ? 0 : 360);
+  roll(wpNode, wp, '%');
   if (Number.isFinite(was)) {
     wpNode.classList.toggle('rising', wp > was);
     wpNode.classList.toggle('falling', wp < was);

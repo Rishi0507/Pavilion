@@ -10,21 +10,43 @@
  * player cannot get from the numbers alone.
  */
 
+/* The board is warm, not blue.
+ *
+ * The first palette had a blue-green cast, which is what a screen does when
+ * nobody decides otherwise and is why so many dark interfaces look alike. A
+ * board that has stood in the sun for thirty seasons goes the other way: warm
+ * charcoal, bitumen, dust. The numerals are painted tin, so they are an off
+ * white with yellow in it rather than a grey.
+ *
+ * Depth comes from a one-pixel highlight along the top edge of a panel, the way
+ * light catches a raised metal lip. There are no shadows behind floating cards
+ * and nothing glows, because none of that is a thing a scoreboard does.
+ */
 :root {
-  --board:  #14171A;   /* weathered board, faint blue-green cast */
-  --panel:  #1C2126;   /* raised section */
-  --panel2: #232A31;
-  --rule:   #2A3037;   /* hairline grid */
-  --ink:    #E8E4DA;   /* tin-plate off-white */
-  --dim:    #8A9199;
-  --faint:  #5A626B;
+  --board:  #15140F;   /* weathered board, warm */
+  --panel:  #1D1B15;   /* raised section */
+  --panel2: #262319;
+  --rule:   #322E24;   /* hairline grid */
+  --lip:    rgba(255, 244, 214, 0.055); /* light on a raised edge */
+  --ink:    #F0EADB;   /* painted tin, off white */
+  --dim:    #9A9282;
+  --faint:  #6A6455;
 
-  --gain:   #4E9F5B;
-  --level:  #C9A227;
-  --loss:   #C1272D;   /* also the ball */
+  --gain:   #6FA45C;
+  --level:  #D2A63A;
+  --loss:   #C4483B;   /* also the ball */
 
   --tap: 44px;
   --gap: 12px;
+
+  /* A spacing scale, so the vertical rhythm is decided once rather than
+   * argued over at every element. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 14px;
+  --s4: 22px;
+  --s5: 34px;
+  --s6: 52px;
 
   /* One curve and three durations, used everywhere. A page where each element
    * eases differently reads as several pages stitched together; a single curve
@@ -61,34 +83,48 @@ body {
   /* Tabular figures everywhere by default: numbers are the content of this
    * game, and a score that shifts width as it changes reads as sloppy. */
   font-variant-numeric: tabular-nums lining-nums;
-  max-width: 560px;
+  max-width: 680px;
   margin-inline: auto;
   overflow-x: hidden;
 }
 
 /* Masthead ---------------------------------------------------------------- */
 
-.masthead { padding: 28px 0 18px; border-bottom: 1px solid var(--rule); }
+.masthead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: end;
+  gap: 0 var(--s3);
+  padding: var(--s6) 0 var(--s3);
+  border-bottom: 2px solid var(--rule);
+}
 
 .wordmark {
+  grid-row: 1 / span 2;
   margin: 0;
-  font-size: 40px;
+  font-size: 52px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  line-height: 1;
+  letter-spacing: 0.14em;
+  line-height: 0.86;
+  /* The wordmark is set in the tin-plate colour and the rest of the header is
+   * not, so the eye lands on the name and then reads down. */
+  color: var(--ink);
 }
 
 .tagline {
-  margin: 6px 0 0;
+  align-self: end;
+  margin: 0;
   font-family: var(--face-txt);
   font-style: italic;
+  font-size: 17px;
+  line-height: 1.2;
   color: var(--dim);
 }
 
 .dateline {
-  margin: 10px 0 0;
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  margin: var(--s1) 0 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
   color: var(--faint);
   text-transform: uppercase;
 }
@@ -140,15 +176,22 @@ button:focus-visible, a:focus-visible {
 .primary {
   width: 100%;
   min-height: var(--tap);
-  margin-top: 24px;
-  padding: 14px;
+  margin-top: var(--s5);
+  padding: 16px;
   border: 1px solid var(--ink);
   background: var(--ink);
   color: var(--board);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.primary:disabled {
+  border-color: var(--rule);
+  background: transparent;
+  color: var(--faint);
+  cursor: not-allowed;
 }
 
 .primary:active { transform: translateY(1px); }
@@ -177,7 +220,7 @@ button:focus-visible, a:focus-visible {
   position: relative;
   margin: 18px 0 0;
   border: 1px solid var(--rule);
-  background: #05070b;
+  background: var(--panel);
   overflow: hidden;
   aspect-ratio: 16 / 9;
   animation: ground-in var(--slow) var(--ease) both;
@@ -185,65 +228,78 @@ button:focus-visible, a:focus-visible {
 
 .ground-slim { aspect-ratio: 21 / 8; margin-bottom: 22px; }
 
-.ground-stage { position: absolute; inset: 0; }
-
-/* The render arrives as an image, so it fades in the way a photograph would
- * rather than popping. */
-.stadium {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  animation: stage-in 620ms var(--ease) both;
-}
-
-@keyframes stage-in {
-  from { opacity: 0; transform: scale(1.04); }
-  to   { opacity: 1; transform: none; }
-}
-
-/* Without WebGL there is no render to caption, so the panel collapses to a
- * plain band rather than leaving a black rectangle on the page. */
-.ground.no-stage { aspect-ratio: auto; background: var(--panel); }
-.ground.no-stage .ground-stage { display: none; }
-
 .ground-plate,
 .ground-target {
   position: absolute;
   z-index: 1;
-  padding: 14px 16px;
+  padding: var(--s3) var(--s4);
 }
 
+/* The name sits over grass and stands, so it carries its own base. */
 .ground-plate {
   left: 0;
-  bottom: 0;
   right: 0;
+  bottom: 0;
   display: grid;
   gap: 1px;
-  background: linear-gradient(to top, rgba(5, 7, 11, 0.92), rgba(5, 7, 11, 0));
-  padding-top: 42px;
+  background: linear-gradient(to top,
+    rgba(20, 17, 11, 0.95) 0%,
+    rgba(20, 17, 11, 0.8) 45%,
+    rgba(20, 17, 11, 0) 100%);
+  padding-top: 58px;
 }
-
-.ground.no-stage .ground-plate { background: none; padding-top: 14px; position: static; }
-.ground.no-stage .ground-target { position: static; text-align: left; padding-top: 0; }
 
 .ground-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   text-wrap: balance;
 }
+
 .ground-city {
   font-size: 11px;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--dim);
 }
+
 .ground-dims {
   margin-top: 3px;
   font-size: 11px;
   color: var(--faint);
   letter-spacing: 0.03em;
+}
+
+/* Without the drawing there is nothing to caption, so the panel collapses to a
+ * plain band rather than leaving an empty rectangle on the page. */
+.ground.no-stage { aspect-ratio: auto; background: var(--panel); }
+.ground.no-stage .ground-stage { display: none; }
+.ground.no-stage .ground-plate {
+  position: static;
+  background: none;
+  padding-top: var(--s3);
+}
+.ground.no-stage .ground-target {
+  position: static;
+  text-align: left;
+  background: none;
+  padding-top: 0;
+}
+
+.ground-stage { position: absolute; inset: 0; }
+
+/* The drawing is vector, so it is sharp at any size and costs nothing to
+ * scale. It fades in the way a photograph would rather than popping. */
+.ground-stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: stage-in 520ms var(--ease) both;
+}
+
+@keyframes stage-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* The target sits over a full stand, so it needs its own ground to stay
@@ -252,13 +308,16 @@ button:focus-visible, a:focus-visible {
   right: 0;
   top: 0;
   text-align: right;
-  padding-left: 56px;
-  padding-bottom: 26px;
-  background: linear-gradient(
-    to bottom left,
-    rgba(5, 7, 11, 0.88) 0%,
-    rgba(5, 7, 11, 0.72) 45%,
-    rgba(5, 7, 11, 0) 100%
+  padding-left: 120px;
+  padding-bottom: 64px;
+  /* A radial fade rather than a linear one: a linear gradient in a box leaves a
+   * visible straight edge where the box ends, which over a drawing reads as a
+   * seam. */
+  background: radial-gradient(
+    120% 120% at 100% 0%,
+    rgba(20, 17, 11, 0.92) 0%,
+    rgba(20, 17, 11, 0.6) 45%,
+    rgba(20, 17, 11, 0) 78%
   );
 }
 
@@ -268,7 +327,7 @@ button:focus-visible, a:focus-visible {
   font-weight: 700;
   line-height: 0.9;
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 18px rgba(5, 7, 11, 0.9);
+  text-shadow: 0 1px 14px rgba(20, 17, 11, 0.85);
 }
 
 .ground-note {
@@ -310,25 +369,52 @@ button:focus-visible, a:focus-visible {
 
 /* Scoreboard -------------------------------------------------------------- */
 
+/* The scoreboard.
+ *
+ * This is the one thing on the page a player looks at every over, so it is
+ * sized like the hero it is rather than like a status bar. The score is the
+ * largest object in the interface; the two figures beside it are labelled and
+ * subordinate. The top lip catches the light, which is the only depth cue used
+ * anywhere.
+ */
 .scoreboard {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 16px;
+  gap: var(--s2) var(--s4);
   align-items: end;
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: var(--s4);
+  padding: var(--s4) var(--s4) var(--s3);
   background: var(--panel);
   border: 1px solid var(--rule);
+  border-top-color: var(--lip);
 }
 
-.sb-main { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.01em; }
-.sb-sep  { color: var(--faint); margin: 0 2px; }
+.sb-main {
+  font-size: 62px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+.sb-sep  { color: var(--faint); margin: 0 2px; font-weight: 400; }
 .sb-wkts { color: var(--dim); }
 
-.sb-need { font-size: 14px; color: var(--dim); text-align: center; }
-.sb-wp   { text-align: right; }
+.sb-need { text-align: center; }
+.sb-need > span:last-child {
+  display: block;
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
 
-.sb-wp-figure { font-size: 26px; font-weight: 600; }
+.sb-wp { text-align: right; }
+.sb-wp-figure {
+  display: block;
+  margin-top: 2px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
 
 /* The over strip: the signature element.
  *
@@ -352,24 +438,26 @@ button:focus-visible, a:focus-visible {
 .strip + .strip { margin-top: 4px; }
 
 .box {
-  aspect-ratio: 1 / 1.35;
+  aspect-ratio: 1 / 1.5;
   display: grid;
   place-items: center;
   background: var(--panel);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--faint);
-  transition: background-color 220ms ease, color 220ms ease;
+  transition: background-color var(--calm) var(--ease), color var(--calm) var(--ease);
 }
 
-.box.good  { background: var(--gain);  color: #0C1A10; }
-.box.level { background: var(--level); color: #1E1703; }
-.box.bad   { background: var(--loss);  color: #FBEAEA; }
+.box.good  { background: var(--gain);  color: #10200F; }
+.box.level { background: var(--level); color: #211803; }
+.box.bad   { background: var(--loss);  color: #FCEDEA; }
 
+/* The over about to be bowled. A hollow box with a bright rule reads as "here"
+ * without competing with the coloured overs already played. */
 .box.now {
   background: var(--panel2);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
 /* Over ------------------------------------------------------------------- */
@@ -639,22 +727,31 @@ button:focus-visible, a:focus-visible {
 
 .modes { display: grid; gap: 10px; margin-top: 24px; }
 
+/* The three ways in.
+ *
+ * A rule down the left edge rather than a full border: it marks the active
+ * choice the way a scorer marks a line, and it means the three cards read as a
+ * list of options instead of three competing boxes.
+ */
 .mode {
+  position: relative;
   min-height: var(--tap);
-  padding: 14px 16px;
+  padding: var(--s3) var(--s4);
   border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
   background: var(--panel);
+  border-top-color: var(--lip);
   color: var(--ink);
   text-align: left;
   display: grid;
   gap: 3px;
 }
 
-.mode:hover { border-color: var(--dim); background: var(--panel2); }
-.mode:first-child { border-color: var(--ink); }
+.mode:hover { border-color: var(--dim); border-left-color: var(--ink); background: var(--panel2); }
+.mode:first-child { border-left-color: var(--level); }
 
-.mode-name { font-size: 16px; font-weight: 600; }
-.mode-sub  { font-size: 13px; color: var(--faint); font-family: var(--face-txt); }
+.mode-name { font-size: 17px; font-weight: 600; letter-spacing: -0.005em; }
+.mode-sub  { font-size: 14px; color: var(--dim); font-family: var(--face-txt); }
 
 .mode-tag {
   margin: 0 0 4px;
@@ -1058,7 +1155,7 @@ button:focus-visible, a:focus-visible {
   .attack-list li,
   .bowler,
   .entering,
-  .stadium,
+  .ground-stage svg,
   .scoreboard.lost { animation: none; }
   .sb-meter span { transition: none; }
   .mode:hover, .intent:not(:disabled):hover,
