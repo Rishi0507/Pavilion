@@ -8,6 +8,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -56,6 +57,7 @@ func (s *Server) Routes(web http.Handler) http.Handler {
 	mux.HandleFunc("POST /api/v1/run/{id}/chase/over", s.handleChaseOver)
 	mux.HandleFunc("POST /api/v1/run/{id}/finish", s.handleFinish)
 	mux.HandleFunc("GET /api/v1/day/{date}/stats", s.handleDayStats)
+	mux.HandleFunc("POST /api/v1/run/{id}/name", s.handleName)
 	mux.HandleFunc("GET /api/v1/day/{date}/leaderboard", s.handleLeaderboard)
 	mux.HandleFunc("GET /api/v1/draft", s.handleDraft)
 	mux.HandleFunc("GET /healthz", s.handleHealth)
@@ -731,6 +733,42 @@ func (s *Server) handleDayStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, stats)
+}
+
+// handleName attaches a display name to a run that has already finished.
+//
+// The name is asked for only once the puzzle is solved, which is necessarily
+// after the result has been recorded, so it arrives on its own. The run
+// identifier is the authority: it is a random value known only to the session
+// that played the run, so holding it is what entitles a caller to name it.
+func (s *Server) handleName(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Player string `json:"player"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "malformed request")
+		return
+	}
+
+	name := sanitisePlayer(req.Player)
+	if name == "" {
+		writeError(w, http.StatusUnprocessableEntity, "that name is empty once tidied up")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	if err := s.DB.SetPlayer(ctx, r.PathValue("id"), name); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "no such run")
+			return
+		}
+		s.Log.Error("set player", "err", err)
+		writeError(w, http.StatusInternalServerError, "could not save that name")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"player": name})
 }
 
 func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {

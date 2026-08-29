@@ -236,15 +236,28 @@ type Leader struct {
 	Score    float64 `json:"score"`
 	Defended bool    `json:"defended"`
 	Chased   bool    `json:"chased"`
+	Solved   bool    `json:"solved"`
 	Grid     string  `json:"grid"`
 }
 
-// Leaderboard returns the day's best runs by decision score.
+// Leaderboard returns the day's best runs.
+//
+// Solving the puzzle means winning both halves: holding the target and then
+// chasing it down. That is the achievement the board is for, so every solved
+// run outranks every unsolved one however good the unsolved one's decisions
+// were, and the decision score separates runs within each group. Ranking on
+// score alone would put a clever defeat above a win, which is not what anybody
+// means by a leaderboard.
+//
+// Only named runs appear. A board of twenty rows reading "anonymous" is not a
+// board, and nobody is required to give a name to play.
 func (d *DB) Leaderboard(ctx context.Context, date string, limit int) ([]Leader, error) {
 	rows, err := d.sql.QueryContext(ctx, `
-        SELECT player, total_score, defended, chased, defend_grid
-        FROM runs WHERE date = ?
-        ORDER BY total_score DESC LIMIT ?`, date, limit)
+        SELECT player, total_score, defended, chased
+        FROM runs
+        WHERE date = ? AND TRIM(player) <> ''
+        ORDER BY (defended = 1 AND chased = 1) DESC, total_score DESC
+        LIMIT ?`, date, limit)
 	if err != nil {
 		return nil, fmt.Errorf("store: leaderboard: %w", err)
 	}
@@ -254,14 +267,34 @@ func (d *DB) Leaderboard(ctx context.Context, date string, limit int) ([]Leader,
 	for rows.Next() {
 		var l Leader
 		var def, ch int
-		if err := rows.Scan(&l.Player, &l.Score, &def, &ch, &l.Grid); err != nil {
+		if err := rows.Scan(&l.Player, &l.Score, &def, &ch); err != nil {
 			return nil, fmt.Errorf("store: leaderboard: %w", err)
 		}
 		l.Defended, l.Chased = def == 1, ch == 1
-		if l.Player == "" {
-			l.Player = "anonymous"
-		}
+		l.Solved = l.Defended && l.Chased
 		out = append(out, l)
 	}
 	return out, rows.Err()
+}
+
+// SetPlayer names a run that has already been recorded.
+//
+// A player is asked for their name only once the puzzle is solved, which is
+// necessarily after the run has been saved, so the name arrives separately.
+// Renaming is allowed: a run belongs to whoever holds its identifier, and the
+// identifier is only known to the session that played it.
+func (d *DB) SetPlayer(ctx context.Context, runID, player string) error {
+	res, err := d.sql.ExecContext(ctx,
+		`UPDATE runs SET player = ? WHERE id = ?`, player, runID)
+	if err != nil {
+		return fmt.Errorf("store: set player: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("store: set player: %w", err)
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

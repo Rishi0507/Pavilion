@@ -21,34 +21,74 @@
 
 <main id="app">
 
-  <!-- Menu -->
-  <section class="card" id="screen-menu" hidden>
-    <ol class="howto">
-      <li><b>A score is set.</b> Today it is <span id="menu-target">—</span>.</li>
-      <li><b>You bowl first.</b> Five bowlers, four overs each. Every over you
-          choose who bowls. Stop them getting there.</li>
-      <li><b>Then you bat.</b> Same score, other side. Six attacking overs to
-          spend across twenty. Get there yourself.</li>
-    </ol>
-    <p class="prose subtle">
-      Takes about three minutes. The catch is that your best bowler only has
-      four overs, so using him early means someone worse bowls at the end.
-    </p>
+  <!-- The landing page -->
+  <section id="screen-menu" hidden>
 
-    <div class="modes">
-      <button class="mode" data-mode="daily">
-        <span class="mode-name">Today&rsquo;s puzzle</span>
-        <span class="mode-sub">The same one everybody gets. Counts towards the day&rsquo;s scores.</span>
-      </button>
-      <button class="mode" data-mode="practice">
-        <span class="mode-name">Practice</span>
-        <span class="mode-sub">A fresh situation each time. Play as many as you like.</span>
-      </button>
-      <button class="mode" data-mode="draft">
-        <span class="mode-name">Pick your XI</span>
-        <span class="mode-sub">Choose your own bowlers and batters, on a budget.</span>
-      </button>
+    <div class="hero">
+      <div class="hero-art" data-ground-host aria-hidden="true"></div>
+
+      <div class="hero-body">
+        <h1 class="hero-mark">PAR</h1>
+        <p class="hero-line">One target. Two innings. Three minutes.</p>
+
+        <div class="hero-today">
+          <span class="label">TODAY&rsquo;S TARGET</span>
+          <span class="hero-target" id="menu-target">—</span>
+          <span class="hero-where" id="menu-where"></span>
+        </div>
+
+        <div class="modes">
+          <button class="mode" data-mode="daily">
+            <span class="mode-name">Today&rsquo;s puzzle</span>
+            <span class="mode-sub">The same one everybody gets. Counts towards the day&rsquo;s scores.</span>
+          </button>
+          <button class="mode" data-mode="practice">
+            <span class="mode-name">Practice</span>
+            <span class="mode-sub">A fresh situation each time. Play as many as you like.</span>
+          </button>
+          <button class="mode" data-mode="draft">
+            <span class="mode-name">Pick your XI</span>
+            <span class="mode-sub">Choose your own bowlers and batters, on a budget.</span>
+          </button>
+        </div>
+
+        <button class="link-button" id="btn-board">See today&rsquo;s leaderboard &rarr;</button>
+      </div>
+
+      <a class="hero-more" href="#how">How it works</a>
     </div>
+
+    <div class="explainer" id="how">
+      <ol class="howto">
+        <li><b>A score is set.</b> One target, the same for everybody, chosen by
+            simulating the day thousands of times until it makes a contest.</li>
+        <li><b>You bowl first.</b> Five bowlers, four overs each. Every over you
+            choose who bowls. Stop them getting there.</li>
+        <li><b>Then you bat.</b> Same score, other side. Six attacking overs to
+            spend across twenty. Get there yourself.</li>
+      </ol>
+      <p class="prose subtle">
+        The catch is that your best bowler only has four overs, so using him
+        early means someone worse bowls at the end. You are scored on your
+        choices rather than your luck: every decision is compared against what
+        else was available, before the ball was bowled.
+      </p>
+    </div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section class="card" id="screen-board" hidden>
+    <h2 class="rule-heading">Today&rsquo;s leaderboard <span class="hint" id="board-date"></span></h2>
+    <p class="prose subtle">
+      A puzzle counts as solved only when both halves are won: the target held
+      and then chased down. Solved runs come first, and the decision score
+      separates them.
+    </p>
+    <ol class="board" id="board-rows"></ol>
+    <p class="empty" id="board-empty" hidden>
+      Nobody has put a name on the board yet today. Solve it and you will be first.
+    </p>
+    <button class="ghost" id="btn-board-back">Back</button>
   </section>
 
   <!-- Draft -->
@@ -87,11 +127,65 @@
     </div>
 
     <h3 class="sub-heading">Bowlers <span class="hint" id="hint-bowlers">pick 5</span></h3>
-    <input class="search" id="search-bowlers" type="search" placeholder="Search bowlers" autocomplete="off">
+    <div class="filters" data-for="bowlers">
+      <input class="search" id="search-bowlers" type="search" placeholder="Search bowlers" autocomplete="off">
+      <div class="filter-row">
+        <label><span class="label">Team</span>
+          <select id="f-bowlers-team"><option value="">Any</option></select></label>
+        <label><span class="label">Type</span>
+          <select id="f-bowlers-style"><option value="">Any</option></select></label>
+        <label><span class="label">Era</span>
+          <select id="f-bowlers-era">
+            <option value="">Any</option>
+            <option value="now">Playing now</option>
+            <option value="past">Retired</option>
+          </select></label>
+        <label><span class="label">Max price</span>
+          <span class="range">
+            <input id="f-bowlers-cost" type="range" min="3" max="20" value="20">
+            <output id="f-bowlers-cost-out">20</output>
+          </span></label>
+        <label><span class="label">Sort</span>
+          <select id="f-bowlers-sort">
+            <option value="cost">Price</option>
+            <option value="rating">Rating</option>
+            <option value="name">Name</option>
+          </select></label>
+        <button type="button" class="link-button" id="f-bowlers-clear">Clear</button>
+      </div>
+      <p class="filter-count" id="count-bowlers"></p>
+    </div>
     <div class="picks" id="draft-bowlers"></div>
 
     <h3 class="sub-heading">Batters <span class="hint" id="hint-batters">pick 6</span></h3>
-    <input class="search" id="search-batters" type="search" placeholder="Search batters" autocomplete="off">
+    <div class="filters" data-for="batters">
+      <input class="search" id="search-batters" type="search" placeholder="Search batters" autocomplete="off">
+      <div class="filter-row">
+        <label><span class="label">Team</span>
+          <select id="f-batters-team"><option value="">Any</option></select></label>
+        <label><span class="label">Hand</span>
+          <select id="f-batters-style"><option value="">Any</option></select></label>
+        <label><span class="label">Era</span>
+          <select id="f-batters-era">
+            <option value="">Any</option>
+            <option value="now">Playing now</option>
+            <option value="past">Retired</option>
+          </select></label>
+        <label><span class="label">Max price</span>
+          <span class="range">
+            <input id="f-batters-cost" type="range" min="3" max="20" value="20">
+            <output id="f-batters-cost-out">20</output>
+          </span></label>
+        <label><span class="label">Sort</span>
+          <select id="f-batters-sort">
+            <option value="cost">Price</option>
+            <option value="rating">Rating</option>
+            <option value="name">Name</option>
+          </select></label>
+        <button type="button" class="link-button" id="f-batters-clear">Clear</button>
+      </div>
+      <p class="filter-count" id="count-batters"></p>
+    </div>
     <div class="picks" id="draft-batters"></div>
 
     <p class="draft-note" id="draft-note"></p>
@@ -274,6 +368,18 @@
         good score and a loss can happen on the same day.
       </p>
     </div>
+
+    <!-- Asked for only when the puzzle is actually solved, which is both
+         halves won, because that is what the board is for. -->
+    <form class="claim" id="claim" hidden>
+      <p class="claim-head">You solved it. Put your name on the board.</p>
+      <div class="claim-row">
+        <input class="search" id="claim-name" type="text" maxlength="24"
+               placeholder="Your name" autocomplete="nickname" required>
+        <button class="primary" type="submit" id="btn-claim">Add</button>
+      </div>
+      <p class="claim-note" id="claim-note"></p>
+    </form>
 
     <div class="result-figures">
       <div><span class="label">PERCENTILE</span><span class="figure" id="result-pct">—</span></div>

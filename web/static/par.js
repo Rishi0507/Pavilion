@@ -89,6 +89,7 @@ const state = {
   puzzle: null,
   mode: 'daily',
   lastSituation: '',
+  today: null,
   draft: null,
   draftSituation: '',
   pickedBowlers: [],
@@ -152,11 +153,12 @@ function clearError() { el('error').hidden = true; }
  * the menu rather than pretending. That is honest, and the daily puzzle is
  * still there to be started again.
  */
-const RESUMABLE = { menu: true, draft: true, result: true };
+const RESUMABLE = { menu: true, draft: true, result: true, board: true };
 
 function route(name) {
   switch (name) {
     case 'draft': return loadDraft();
+    case 'board': return loadBoard();
     case 'result': return show('result');
     default: return loadMenu();
   }
@@ -178,6 +180,9 @@ window.addEventListener('popstate', (e) => {
   route(name);
 });
 
+const SCREENS = ['screen-menu', 'screen-board', 'screen-draft',
+  'screen-start', 'screen-play', 'screen-result'];
+
 function show(name, push = true) {
   if (push) {
     const entry = { screen: name };
@@ -191,7 +196,7 @@ function show(name, push = true) {
     }
   }
   const target = `screen-${name}`;
-  for (const id of ['screen-menu', 'screen-draft', 'screen-start', 'screen-play', 'screen-result']) {
+  for (const id of SCREENS) {
     const node = el(id);
     const wanted = id === target;
     if (wanted && node.hidden) {
@@ -213,9 +218,70 @@ function show(name, push = true) {
 async function loadMenu() {
   try {
     const p = await api('GET', '/api/v1/puzzle/today');
+    state.today = p;
     el('dateline').textContent = p.date;
     el('menu-target').textContent = p.target;
+
+    const ground = p.ground || { name: p.venue };
+    el('menu-where').textContent = ground.city
+      ? `at ${ground.name}, ${ground.city}`
+      : `at ${ground.name || ''}`;
+
     show('menu');
+    // The ground sits behind the hero rather than beside it, so the first
+    // screen is a place rather than a menu.
+    showGround('#screen-menu', ground);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+/* The leaderboard ----------------------------------------------------------
+ *
+ * Solving means winning both halves, and the board says so plainly: solved
+ * runs first, then everything else by decision score. Ranking on score alone
+ * would put a clever defeat above a win.
+ */
+async function loadBoard() {
+  clearError();
+  try {
+    const date = (state.today && state.today.date) || '';
+    const b = await api('GET', `/api/v1/day/${date}/leaderboard`);
+    el('board-date').textContent = b.date || date;
+
+    const rows = b.leaders || [];
+    const list = el('board-rows');
+    list.replaceChildren();
+
+    rows.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.className = 'board-row' + (r.solved ? ' solved' : '');
+      li.style.setProperty('--i', String(i));
+
+      const rank = document.createElement('span');
+      rank.className = 'board-rank';
+      rank.textContent = i + 1;
+
+      const who = document.createElement('span');
+      who.className = 'board-who';
+      who.textContent = r.player;
+
+      const tag = document.createElement('span');
+      tag.className = 'board-tag';
+      tag.textContent = r.solved
+        ? 'solved'
+        : r.defended ? 'held only' : r.chased ? 'chased only' : 'neither';
+
+      const score = document.createElement('span');
+      score.className = 'board-score';
+      score.textContent = (r.score >= 0 ? '+' : '') + r.score.toFixed(0);
+
+      li.append(rank, who, tag, score);
+      list.append(li);
+    });
+
+    el('board-empty').hidden = rows.length > 0;
+    show('board');
   } catch (err) {
     showError(err.message);
   }
@@ -345,8 +411,8 @@ async function loadDraft() {
     renderPicks('draft-batters', d.batters, state.pickedBatters, d.pick_batters, d.batter_budget);
     el('hint-bowlers').textContent = `pick ${d.pick_bowlers} of ${d.bowlers.length}`;
     el('hint-batters').textContent = `pick ${d.pick_batters} of ${d.batters.length}`;
-    wireSearch('search-bowlers', 'draft-bowlers');
-    wireSearch('search-batters', 'draft-batters');
+    wireFilters('bowlers', 'draft-bowlers', d.bowlers);
+    wireFilters('batters', 'draft-batters', d.batters);
     updateBudget();
 
     const ground = d.ground || { name: d.venue };
@@ -363,24 +429,165 @@ async function loadDraft() {
   }
 }
 
-// wireSearch filters a pool in place. With a hundred bowlers on offer, a list
-// without a search box is a list nobody reads to the end of.
-function wireSearch(inputID, containerID) {
-  const input = el(inputID);
-  input.value = '';
-  input.oninput = () => {
-    const q = input.value.trim().toLowerCase();
-    for (const btn of el(containerID).children) {
-      const name = btn.querySelector('.pick-name').textContent.toLowerCase();
-      // The subtitle carries the team, the style and the years, so searching
-      // "csk" or "2011" finds a side as readily as searching a surname does.
-      const style = btn.querySelector('.pick-style').textContent.toLowerCase();
-      // A selected player always stays visible, so a filter cannot hide part of
-      // the side being assembled.
-      btn.hidden = q !== '' && !btn.classList.contains('on') &&
-        !name.includes(q) && !style.includes(q);
-    }
+/* Filtering the pool -------------------------------------------------------
+ *
+ * A hundred and seventy bowlers across eighteen seasons is a lot of list, and
+ * a search box only helps somebody who already knows the name they want. The
+ * filters answer the questions a selector actually has: who is left-arm, who
+ * is a Chennai player, who is still playing, and what can I get for eight
+ * credits.
+ *
+ * Everything runs on the pool already in memory, so it is instant and the
+ * server is not asked again. A player who is already picked is never hidden:
+ * a filter that concealed part of the side being assembled would make the
+ * budget line and the visible cards disagree.
+ */
+const filters = {};
+
+function optionsFrom(pool, key) {
+  const seen = new Set();
+  for (const p of pool) {
+    const v = (p[key] || '').trim();
+    if (v) seen.add(v);
+  }
+  return [...seen].sort();
+}
+
+function fill(select, values) {
+  const keep = select.value;
+  select.replaceChildren();
+  const any = document.createElement('option');
+  any.value = '';
+  any.textContent = 'Any';
+  select.append(any);
+  for (const v of values) {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    select.append(o);
+  }
+  select.value = values.includes(keep) ? keep : '';
+}
+
+// Somebody is "playing now" if their last recorded season is the most recent
+// one in the data. Hard-coding a year would go stale the moment a season ends.
+function latestSeason(pool) {
+  let last = 0;
+  for (const p of pool) {
+    const end = Number(String(p.years || '').slice(-4));
+    if (Number.isFinite(end) && end > last) last = end;
+  }
+  return last;
+}
+
+function wireFilters(which, containerID, pool) {
+  const f = {
+    q: '',
+    team: '',
+    style: '',
+    era: '',
+    cost: 20,
+    sort: 'cost',
+    pool,
+    latest: latestSeason(pool),
+    containerID,
   };
+  filters[which] = f;
+
+  fill(el(`f-${which}-team`), optionsFrom(pool, 'team'));
+  fill(el(`f-${which}-style`), optionsFrom(pool, which === 'bowlers' ? 'style' : 'hand'));
+
+  // The slider spans the prices that actually exist. A fixed 3-to-20 range left
+  // the bottom third of the track dead, because the cheapest bowler with a real
+  // record is not the cheapest price the scale allows.
+  const maxCost = pool.reduce((m, p) => Math.max(m, p.cost), 3);
+  const minCost = pool.reduce((m, p) => Math.min(m, p.cost), maxCost);
+  const cost = el(`f-${which}-cost`);
+  cost.min = String(minCost);
+  cost.max = String(maxCost);
+  cost.value = String(maxCost);
+  f.cost = maxCost;
+  f.maxCost = maxCost;
+  el(`f-${which}-cost-out`).textContent = maxCost;
+
+  const search = el(`search-${which}`);
+  search.value = '';
+
+  const apply = () => applyFilters(which);
+
+  search.oninput = () => { f.q = search.value.trim().toLowerCase(); apply(); };
+  el(`f-${which}-team`).onchange = (e) => { f.team = e.target.value; apply(); };
+  el(`f-${which}-style`).onchange = (e) => { f.style = e.target.value; apply(); };
+  el(`f-${which}-era`).onchange = (e) => { f.era = e.target.value; apply(); };
+  el(`f-${which}-sort`).onchange = (e) => { f.sort = e.target.value; apply(); };
+  cost.oninput = (e) => {
+    f.cost = Number(e.target.value);
+    el(`f-${which}-cost-out`).textContent = f.cost;
+    apply();
+  };
+  el(`f-${which}-clear`).onclick = () => {
+    f.q = ''; f.team = ''; f.style = ''; f.era = ''; f.sort = 'cost'; f.cost = f.maxCost;
+    search.value = '';
+    el(`f-${which}-team`).value = '';
+    el(`f-${which}-style`).value = '';
+    el(`f-${which}-era`).value = '';
+    el(`f-${which}-sort`).value = 'cost';
+    cost.value = String(maxCost);
+    el(`f-${which}-cost-out`).textContent = maxCost;
+    apply();
+  };
+
+  apply();
+}
+
+function matches(p, f, which) {
+  if (f.team && p.team !== f.team) return false;
+  if (f.style) {
+    const v = which === 'bowlers' ? p.style : p.hand;
+    if (v !== f.style) return false;
+  }
+  if (f.cost && p.cost > f.cost) return false;
+  if (f.era) {
+    const end = Number(String(p.years || '').slice(-4));
+    const current = Number.isFinite(end) && end >= f.latest - 1;
+    if (f.era === 'now' && !current) return false;
+    if (f.era === 'past' && current) return false;
+  }
+  if (f.q) {
+    const hay = `${p.name} ${p.team || ''} ${p.style || ''} ${p.hand || ''} ${p.years || ''}`.toLowerCase();
+    if (!hay.includes(f.q)) return false;
+  }
+  return true;
+}
+
+function applyFilters(which) {
+  const f = filters[which];
+  if (!f) return;
+
+  const order = {
+    cost: (a, b) => b.cost - a.cost || a.name.localeCompare(b.name),
+    rating: (a, b) => b.rating - a.rating || a.name.localeCompare(b.name),
+    name: (a, b) => a.name.localeCompare(b.name),
+  }[f.sort];
+
+  const rank = new Map();
+  [...f.pool].sort(order).forEach((p, i) => rank.set(p.id, i));
+
+  let shown = 0;
+  for (const btn of el(f.containerID).children) {
+    const id = Number(btn.dataset.id);
+    const p = f.pool.find((x) => x.id === id);
+    const picked = btn.classList.contains('on');
+    const ok = picked || (p && matches(p, f, which));
+    btn.hidden = !ok;
+    btn.style.order = String(rank.get(id) ?? 0);
+    if (ok && !picked) shown++;
+  }
+
+  const total = f.pool.length;
+  el(`count-${which}`).textContent = shown === total
+    ? `all ${total}`
+    : `${shown} of ${total}`;
 }
 
 function costOfPicked(pool, picked) {
@@ -437,6 +644,7 @@ function togglePick(p, picked, pool, limit, budget, containerID) {
   }
   paintPicks(containerID, pool, picked, limit, budget);
   updateBudget();
+  applyFilters(containerID === 'draft-bowlers' ? 'bowlers' : 'batters');
 }
 
 function paintPicks(containerID, pool, picked, limit, budget) {
@@ -917,6 +1125,7 @@ async function finish() {
         : 'You are the first to play today.';
 
     el('btn-copy').onclick = () => copyShare(r.share);
+    offerTheBoard(r);
     show('result');
   } catch (err) {
     showError(err.message);
@@ -961,6 +1170,48 @@ function paintHalf(which, won, runs, wickets, score) {
 
   el(`half-${which}-mark`).textContent = mark;
   el(`half-${which}-line`).textContent = `${line} · ${decisions}`;
+}
+
+/* Claiming a place on the board.
+ *
+ * The name is asked for only when the puzzle is actually solved, which means
+ * both halves won. Asking on every result would be a form in the way of the
+ * score, and a board that anybody can join by losing is not a board.
+ *
+ * It is asked for after the fact because that is when the achievement exists.
+ * The run has already been saved by then, so the name is attached to it
+ * separately, and the run identifier — random, and known only to this session —
+ * is what entitles this page to attach it.
+ */
+function offerTheBoard(r) {
+  const form = el('claim');
+  const solved = r.defended && r.chased;
+
+  form.hidden = !(solved && r.counts);
+  if (form.hidden) return;
+
+  const note = el('claim-note');
+  const input = el('claim-name');
+  const saved = localStorage.getItem('par.player') || '';
+
+  input.value = saved;
+  note.textContent = '';
+  form.classList.remove('done');
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = input.value.trim();
+    if (!name) return;
+    try {
+      const out = await api('POST', `/api/v1/run/${state.runID}/name`, { player: name });
+      localStorage.setItem('par.player', out.player);
+      form.classList.add('done');
+      note.textContent = `On the board as ${out.player}.`;
+      el('btn-claim').textContent = 'Saved';
+    } catch (err) {
+      note.textContent = err.message;
+    }
+  };
 }
 
 function verdictOf(r) {
@@ -1048,6 +1299,8 @@ el('btn-same').onclick = () => {
   openRun({ mode: state.mode === 'daily' ? 'daily' : state.mode, avoid: '' });
 };
 el('btn-menu').onclick = loadMenu;
+el('btn-board').onclick = loadBoard;
+el('btn-board-back').onclick = loadMenu;
 
 // The first screen replaces the entry the browser already has rather than
 // adding one, so a single back press leaves the site as it would from any

@@ -38,6 +38,8 @@
 
   --tap: 44px;
   --gap: 12px;
+  --gutter: 16px;
+  --measure: 680px;
 
   /* A spacing scale, so the vertical rhythm is decided once rather than
    * argued over at every element. */
@@ -74,7 +76,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  padding: 0 16px calc(32px + env(safe-area-inset-bottom));
+  padding: 0 var(--gutter) calc(32px + env(safe-area-inset-bottom));
   background: var(--board);
   color: var(--ink);
   font-family: var(--face-num);
@@ -83,10 +85,23 @@ body {
   /* Tabular figures everywhere by default: numbers are the content of this
    * game, and a score that shifts width as it changes reads as sloppy. */
   font-variant-numeric: tabular-nums lining-nums;
-  max-width: 680px;
-  margin-inline: auto;
+  /* The page is full width and every block sets its own measure, so a hero can
+   * bleed to the edges of the screen while a paragraph still stops at a
+   * readable line length. */
+  max-width: none;
   overflow-x: hidden;
 }
+
+.masthead,
+main#app > section,
+.colophon > p {
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+/* The landing page carries its own wordmark, so the masthead would be the name
+ * twice on the first screen. */
+body:has(#screen-menu:not([hidden])) .masthead { display: none; }
 
 /* Masthead ---------------------------------------------------------------- */
 
@@ -843,15 +858,32 @@ button:focus-visible, a:focus-visible {
   color: var(--faint);
 }
 
-.colophon p { margin: 0 0 8px; }
+/* margin-block, not the shorthand: the shorthand would reset the auto inline
+ * margins that centre these paragraphs on the page. */
+.colophon p { margin-block: 0 8px; }
 .colophon a { color: var(--dim); }
 
 /* Narrow phones ----------------------------------------------------------- */
 
-@media (max-width: 380px) {
-  .target-figure { font-size: 56px; }
-  .sb-main { font-size: 36px; }
+@media (max-width: 480px) {
+  .target-figure { font-size: 52px; }
+  .sb-main { font-size: 40px; }
   .bowlers { grid-template-columns: 1fr; }
+
+  /* The pick list is a flex row now, so the old grid rule stopped applying and
+   * two cards were sharing a phone's width between them. */
+  .picks > .pick { flex-basis: 100%; }
+
+  /* Five controls in a row do not fit, and wrapping them into five ragged rows
+   * is worse than two tidy ones. */
+  .filter-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .filter-row .range input { width: 100%; }
+  .filter-row .link-button { grid-column: 1 / -1; justify-self: start; }
+
+  .halves { grid-template-columns: 1fr; }
+  .result-figures { grid-template-columns: 1fr 1fr; }
+  .claim-row { flex-wrap: wrap; }
+  .claim-row .primary { width: 100%; }
   .mh-runs { font-size: 8px; }
   .mh-plot { height: 64px; }
 }
@@ -1379,11 +1411,7 @@ button:focus-visible, a:focus-visible {
  * decision is made, which is the only moment that matters.
  */
 @media (min-width: 940px) {
-  body { max-width: none; }
-
-  .masthead,
-  main#app > section,
-  .colophon > p { max-width: 680px; margin-inline: auto; }
+  :root { --gutter: 24px; }
 
   #screen-play {
     display: grid;
@@ -1416,3 +1444,228 @@ button:focus-visible, a:focus-visible {
    * number never was, so both innings stay on one row of twenty here. */
   .play-side .mh-plot { height: 66px; }
 }
+
+/* The landing page --------------------------------------------------------
+ *
+ * A full-height opening: the name, what the game is in one line, today's
+ * target, and the three ways in. The ground is drawn behind it, dimmed hard,
+ * so the first thing on screen is a place rather than a menu.
+ *
+ * Below it, and only below it, the explanation. Somebody who already knows the
+ * game never has to scroll past a tutorial to reach the button, and somebody
+ * who does not can scroll once and find it.
+ */
+#screen-menu { max-width: none !important; }
+
+.hero {
+  position: relative;
+  /* Out to the edges of the screen, then back in for the type. */
+  margin-inline: calc(-1 * var(--gutter));
+  padding-inline: var(--gutter);
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding: var(--s6) 0;
+  overflow: hidden;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.3;
+  /* Faded out towards the type so nothing has to compete with the wordmark. */
+  mask-image: linear-gradient(to bottom, transparent, #000 55%, #000 75%, transparent);
+}
+
+.hero-art svg { width: 100%; height: 100%; object-fit: cover; }
+
+.hero-body {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.hero-mark {
+  margin: 0;
+  font-size: clamp(64px, 16vw, 148px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 0.82;
+}
+
+.hero-line {
+  margin: var(--s3) 0 0;
+  font-family: var(--face-txt);
+  font-style: italic;
+  font-size: clamp(17px, 3.4vw, 23px);
+  color: var(--dim);
+}
+
+.hero-today {
+  margin: var(--s5) 0 var(--s4);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.hero-target {
+  display: block;
+  margin-top: var(--s1);
+  font-size: clamp(44px, 9vw, 72px);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.hero-where {
+  display: block;
+  margin-top: var(--s1);
+  font-family: var(--face-txt);
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.hero-more {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s4);
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-decoration: none;
+}
+.hero-more::after { content: " \2193"; }
+.hero-more:hover { color: var(--dim); }
+
+.explainer {
+  max-width: 680px;
+  margin-inline: auto;
+  padding: var(--s6) 0 var(--s5);
+  border-top: 1px solid var(--rule);
+  scroll-margin-top: var(--s4);
+}
+
+.link-button {
+  margin-top: var(--s4);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-button:hover { color: var(--ink); }
+
+/* The leaderboard --------------------------------------------------------- */
+
+.board { margin: var(--s4) 0 0; padding: 0; list-style: none; }
+
+.board-row {
+  display: grid;
+  grid-template-columns: 2.2ch 1fr auto auto;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--rule);
+  animation: rise var(--calm) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+.board-rank { font-size: 12px; color: var(--faint); font-weight: 700; }
+.board-who  { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+
+.board-tag {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.board-row.solved .board-tag { color: var(--gain); }
+.board-row.solved .board-rank { color: var(--ink); }
+
+.board-score { font-size: 17px; font-weight: 700; }
+
+.empty {
+  margin-top: var(--s4);
+  padding: var(--s4);
+  border: 1px dashed var(--rule);
+  font-family: var(--face-txt);
+  color: var(--dim);
+  text-align: center;
+}
+
+/* Filters ----------------------------------------------------------------- */
+
+.filters { margin-bottom: var(--s2); }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s2);
+}
+
+.filter-row label { display: grid; gap: 3px; }
+
+.filter-row select,
+.range input {
+  min-height: 32px;
+  padding: 4px 6px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.filter-row select:hover { border-color: var(--dim); }
+
+.range { display: flex; align-items: center; gap: 6px; }
+.range input { width: 108px; padding: 0; accent-color: var(--ink); }
+.range output { font-size: 13px; font-weight: 700; min-width: 2ch; }
+
+.filter-row .link-button { margin-top: 0; align-self: end; min-height: 32px; }
+
+.filter-count {
+  margin: var(--s2) 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+/* The pick list is ordered by the filter, so it must be a flex row that
+ * respects `order` rather than a grid that ignores it. */
+.picks { display: flex; flex-wrap: wrap; }
+.picks > .pick { flex: 1 1 calc(50% - 4px); min-width: 0; }
+
+/* Claiming a place -------------------------------------------------------- */
+
+.claim {
+  margin-top: var(--s5);
+  padding: var(--s4);
+  border: 1px solid var(--gain);
+  border-left-width: 3px;
+  background: var(--panel);
+}
+
+.claim-head { margin: 0 0 var(--s3); font-size: 15px; font-weight: 600; }
+
+.claim-row { display: flex; gap: var(--s2); align-items: stretch; }
+.claim-row .search { margin: 0; flex: 1; }
+.claim-row .primary { margin: 0; width: auto; padding-inline: var(--s4); }
+
+.claim-note { margin: var(--s2) 0 0; font-size: 12px; color: var(--dim); }
+.claim.done { border-color: var(--rule); }
+.claim.done .claim-note { color: var(--gain); }
