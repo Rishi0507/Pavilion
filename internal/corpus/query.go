@@ -4,6 +4,8 @@ package corpus
 // bytes of hot columns per delivery, a full pass costs single-digit
 // milliseconds, which is why there is no index here and no query planner.
 
+import "sort"
+
 // Volume counts a player's career involvement in the corpus.
 //
 // It is the basis of the eligibility filter: the game may only deal players
@@ -176,4 +178,80 @@ func (s *Store) Dealable(e Eligibility, batKnown, bowlKnown func(cricsheetID str
 		}
 	}
 	return players, bowlers, batters, excluded
+}
+
+// Spell is one player's time at one team.
+type Spell struct {
+	Team        TeamID
+	Innings     int
+	FirstSeason uint16
+	LastSeason  uint16
+}
+
+// Careers returns, for every player, the teams they have appeared for, ordered
+// with the most recent first and ties broken by how long they were there.
+//
+// Cricsheet records the team per delivery rather than per player, because that
+// is the only place the fact exists: a player belongs to whichever side he was
+// batting or bowling for on the day. Reconstructing a career therefore means a
+// scan, which at this size is a few milliseconds and needs no index.
+//
+// Franchises that renamed themselves are left as the corpus recorded them here.
+// Folding "Kings XI Punjab" into "Punjab Kings" is a presentation decision and
+// belongs where the name is shown, not where the history is read.
+func (s *Store) Careers() [][]Spell {
+	type key struct {
+		p PlayerID
+		t TeamID
+	}
+	seen := make(map[key]*Spell)
+	lastInn := make(map[key]int32)
+
+	note := func(p PlayerID, t TeamID, inn InningsID, season uint16) {
+		if p == NoPlayer || t == NoTeam {
+			return
+		}
+		k := key{p, t}
+		sp, ok := seen[k]
+		if !ok {
+			sp = &Spell{Team: t, FirstSeason: season, LastSeason: season}
+			seen[k] = sp
+			lastInn[k] = -1
+		}
+		if lastInn[k] != int32(inn) {
+			lastInn[k] = int32(inn)
+			sp.Innings++
+		}
+		if season < sp.FirstSeason {
+			sp.FirstSeason = season
+		}
+		if season > sp.LastSeason {
+			sp.LastSeason = season
+		}
+	}
+
+	for i := range s.D.Innings {
+		inn := s.D.Innings[i]
+		if s.Inn.SuperOver[inn] {
+			continue
+		}
+		season := s.M.Season[s.Inn.Match[inn]]
+		note(s.D.Batter[i], s.Inn.BattingTeam[inn], inn, season)
+		note(s.D.NonStriker[i], s.Inn.BattingTeam[inn], inn, season)
+		note(s.D.Bowler[i], s.Inn.BowlingTeam[inn], inn, season)
+	}
+
+	out := make([][]Spell, len(s.Players))
+	for k, sp := range seen {
+		out[k.p] = append(out[k.p], *sp)
+	}
+	for _, spells := range out {
+		sort.Slice(spells, func(i, j int) bool {
+			if spells[i].LastSeason != spells[j].LastSeason {
+				return spells[i].LastSeason > spells[j].LastSeason
+			}
+			return spells[i].Innings > spells[j].Innings
+		})
+	}
+	return out
 }

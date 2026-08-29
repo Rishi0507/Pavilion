@@ -26,6 +26,14 @@
   --tap: 44px;
   --gap: 12px;
 
+  /* One curve and three durations, used everywhere. A page where each element
+   * eases differently reads as several pages stitched together; a single curve
+   * is what makes a broadcast graphic package feel like one thing. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --quick: 140ms;
+  --calm: 260ms;
+  --slow: 420ms;
+
   --face-num: "Archivo", ui-sans-serif, system-ui, sans-serif;
   --face-txt: "Newsreader", Georgia, "Times New Roman", serif;
 
@@ -159,36 +167,135 @@ button:focus-visible, a:focus-visible {
 
 /* Start ------------------------------------------------------------------- */
 
-.fixture {
-  display: flex;
-  gap: 24px;
-  align-items: flex-end;
-  padding: 20px 0 22px;
-  border-bottom: 1px solid var(--rule);
+/* The ground.
+ *
+ * A canvas showing the venue, with the fixture set over it the way a broadcast
+ * sets its titles over the establishing shot. The type sits on a gradient
+ * rather than directly on the render, because a rotating camera will eventually
+ * put something pale behind every word otherwise. */
+.ground {
+  position: relative;
+  margin: 18px 0 0;
+  border: 1px solid var(--rule);
+  background: #05070b;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  animation: ground-in var(--slow) var(--ease) both;
+}
+
+.ground-slim { aspect-ratio: 21 / 8; margin-bottom: 22px; }
+
+.ground-stage { position: absolute; inset: 0; }
+
+/* The render arrives as an image, so it fades in the way a photograph would
+ * rather than popping. */
+.stadium {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: stage-in 620ms var(--ease) both;
+}
+
+@keyframes stage-in {
+  from { opacity: 0; transform: scale(1.04); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Without WebGL there is no render to caption, so the panel collapses to a
+ * plain band rather than leaving a black rectangle on the page. */
+.ground.no-stage { aspect-ratio: auto; background: var(--panel); }
+.ground.no-stage .ground-stage { display: none; }
+
+.ground-plate,
+.ground-target {
+  position: absolute;
+  z-index: 1;
+  padding: 14px 16px;
+}
+
+.ground-plate {
+  left: 0;
+  bottom: 0;
+  right: 0;
+  display: grid;
+  gap: 1px;
+  background: linear-gradient(to top, rgba(5, 7, 11, 0.92), rgba(5, 7, 11, 0));
+  padding-top: 42px;
+}
+
+.ground.no-stage .ground-plate { background: none; padding-top: 14px; position: static; }
+.ground.no-stage .ground-target { position: static; text-align: left; padding-top: 0; }
+
+.ground-name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.ground-city {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.ground-dims {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: 0.03em;
+}
+
+/* The target sits over a full stand, so it needs its own ground to stay
+ * legible: a packed tier is close to white, and white numerals on it disappear. */
+.ground-target {
+  right: 0;
+  top: 0;
+  text-align: right;
+  padding-left: 56px;
+  padding-bottom: 26px;
+  background: linear-gradient(
+    to bottom left,
+    rgba(5, 7, 11, 0.88) 0%,
+    rgba(5, 7, 11, 0.72) 45%,
+    rgba(5, 7, 11, 0) 100%
+  );
 }
 
 .target-figure {
   display: block;
-  font-size: 68px;
+  font-size: 54px;
   font-weight: 700;
   line-height: 0.9;
   letter-spacing: -0.02em;
+  text-shadow: 0 2px 18px rgba(5, 7, 11, 0.9);
 }
 
-.fixture-venue { padding-bottom: 6px; font-size: 14px; color: var(--dim); }
+.ground-note {
+  margin: 10px 0 0;
+  font-family: var(--face-txt);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--dim);
+}
+
+@keyframes ground-in {
+  from { opacity: 0; transform: scale(1.015); }
+  to   { opacity: 1; transform: none; }
+}
 
 .attack-list { margin: 0; padding: 0; list-style: none; }
 
 .attack-list li {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 11px 0;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
   border-bottom: 1px solid var(--rule);
   font-size: 15px;
+  animation: rise var(--calm) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
 }
-
-.attack-list .style { font-size: 12px; color: var(--faint); letter-spacing: 0.04em; }
 
 .unvalidated {
   margin-top: 18px;
@@ -331,16 +438,26 @@ button:focus-visible, a:focus-visible {
   background: var(--panel);
   color: var(--ink);
   text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 10px;
+  transition: border-color var(--quick) var(--ease),
+              background var(--quick) var(--ease),
+              transform var(--quick) var(--ease);
+  animation: rise var(--calm) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
 }
 
 .bowler:disabled { opacity: 0.32; cursor: not-allowed; }
-.bowler:not(:disabled):hover { border-color: var(--dim); background: var(--panel2); }
+.bowler:not(:disabled):hover {
+  border-color: var(--dim);
+  background: var(--panel2);
+  transform: translateY(-1px);
+}
+.bowler:not(:disabled):active { transform: translateY(0) scale(0.99); }
 
-.bowler-name { font-size: 14px; font-weight: 600; line-height: 1.2; }
-.bowler-style { font-size: 11px; color: var(--faint); letter-spacing: 0.04em; }
+.bowler .pips { grid-column: 1 / -1; }
 
 /* Overs used, shown as pips so the four-over limit is visible without reading
  * a number. */
@@ -592,16 +709,31 @@ button:focus-visible, a:focus-visible {
   color: var(--ink);
   text-align: left;
   display: grid;
-  gap: 2px;
-  align-content: start;
+  grid-template-columns: auto 1fr auto;
+  gap: 1px 9px;
+  align-content: center;
+  align-items: center;
+  transition: border-color var(--quick) var(--ease),
+              background var(--quick) var(--ease),
+              transform var(--quick) var(--ease);
 }
 
-.pick:hover:not(:disabled) { border-color: var(--dim); }
+.pick .mark { grid-row: 1 / span 2; }
+
+.pick:hover:not(:disabled) { border-color: var(--dim); transform: translateY(-1px); }
+.pick:active:not(:disabled) { transform: translateY(0) scale(0.99); }
 .pick.on { border-color: var(--ink); background: var(--panel2); }
+.pick.on .mark { border-color: var(--ink); color: var(--ink); }
 .pick:disabled { opacity: 0.3; cursor: not-allowed; }
 
-.pick-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
-.pick-style { font-size: 10px; color: var(--faint); }
+.pick-name { grid-column: 2; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.pick-style {
+  grid-column: 2;
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.02em;
+}
+.pick-cost { grid-column: 3; grid-row: 1 / span 2; }
 
 .pick-cost {
   font-size: 12px;
@@ -676,11 +808,9 @@ button:focus-visible, a:focus-visible {
  * the scoreboard's own face are both honest and a better fit than a borrowed
  * headshot would be. */
 .mark {
-  position: absolute;
-  left: 10px;
-  top: 10px;
   width: 28px;
   height: 28px;
+  flex: none;
   display: grid;
   place-items: center;
   border: 1px solid var(--rule);
@@ -691,9 +821,20 @@ button:focus-visible, a:focus-visible {
   color: var(--dim);
 }
 
+/* On a crease card the mark is pinned to the corner, because the card also
+ * carries the strike marker and the figures and there is no room for a column. */
+.bat .mark { position: absolute; left: 10px; top: 10px; }
+
 #bat-striker .mark { border-color: var(--ink); color: var(--ink); }
 
+.bat-who { display: block; }
 .bat-name { display: block; font-size: 13px; font-weight: 600; line-height: 1.25; }
+.bat-team {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+}
 .bat-figs { display: block; font-size: 12px; color: var(--dim); }
 
 .on-strike {
@@ -808,3 +949,118 @@ button:focus-visible, a:focus-visible {
 }
 
 .box.big { animation: swell 380ms ease-out; }
+
+
+/* Names and teams ---------------------------------------------------------
+ *
+ * The same block wherever a player is listed: a monogram, the name, and under
+ * it the side they are known for. The team is the thing that places a name the
+ * reader may not recognise, which matters now that the draft reaches back to
+ * players who last appeared in 2013.
+ *
+ * Team names appear as plain text and nothing else. No crest, no wordmark and
+ * no kit colour: where somebody played is a fact worth stating, whereas the
+ * marks belong to the clubs. */
+.who { min-width: 0; display: block; }
+
+.who-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.who-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+
+.team {
+  padding: 1px 4px;
+  border: 1px solid var(--rule);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.attack-list .who-name { font-size: 15px; }
+
+/* The win-probability meter ------------------------------------------------
+ *
+ * The percentage is already on the board, but a number alone does not show a
+ * swing. The bar makes the same figure legible at a glance and, more usefully,
+ * makes the movement between overs visible as movement. */
+.sb-meter {
+  grid-column: 1 / -1;
+  height: 3px;
+  margin-top: 12px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.sb-meter span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--ink);
+  transition: width var(--slow) var(--ease);
+}
+
+.sb-wp-figure { transition: color var(--calm) var(--ease); }
+.sb-wp-figure.rising { color: var(--gain); }
+.sb-wp-figure.falling { color: var(--loss); }
+
+/* Motion ------------------------------------------------------------------ */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A wicket knocks the board rather than flashing it. The displacement is under
+ * three pixels: enough to register, not enough to have to wait for. */
+@keyframes knock {
+  0%   { transform: none; }
+  25%  { transform: translate(-2px, 1px); }
+  55%  { transform: translate(2px, -1px); }
+  100% { transform: none; }
+}
+
+.entering { animation: screen-in var(--calm) var(--ease) both; }
+
+.scoreboard.lost { animation: knock 300ms var(--ease); }
+
+.mode, .primary, .ghost, .intent {
+  transition: transform var(--quick) var(--ease),
+              border-color var(--quick) var(--ease),
+              background var(--quick) var(--ease);
+}
+.mode:hover, .intent:not(:disabled):hover { transform: translateY(-1px); }
+.mode:active, .primary:active, .ghost:active, .intent:active { transform: scale(0.99); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ground,
+  .attack-list li,
+  .bowler,
+  .entering,
+  .stadium,
+  .scoreboard.lost { animation: none; }
+  .sb-meter span { transition: none; }
+  .mode:hover, .intent:not(:disabled):hover,
+  .bowler:not(:disabled):hover, .pick:hover:not(:disabled) { transform: none; }
+}

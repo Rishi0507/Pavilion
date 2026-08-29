@@ -57,6 +57,7 @@ type DraftView struct {
 	PickBatters  int            `json:"pick_batters"`
 	Target       int            `json:"target"`
 	Venue        string         `json:"venue"`
+	Ground       engine.Ground  `json:"ground"`
 }
 
 func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +73,7 @@ func (s *Server) handleDraft(w http.ResponseWriter, r *http.Request) {
 		PickBatters:  engine.SquadBatters,
 		Target:       target,
 		Venue:        s.Engine.VenueName(venue),
+		Ground:       engine.GroundOf(s.Engine.VenueName(venue)),
 	})
 }
 

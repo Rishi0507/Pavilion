@@ -172,7 +172,7 @@ func webAssets(dev bool) (http.Handler, error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheFor(time.Hour, http.FileServerFS(static))))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheFor(365*24*time.Hour, http.FileServerFS(static))))
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		page := index
 		if dev {
@@ -214,11 +214,23 @@ func stamp(root fs.FS, page []byte) []byte {
 	return page
 }
 
-// cacheFor allows assets to be held, which is safe because their URLs carry a
-// content hash and therefore change whenever they do.
+// cacheFor holds an asset for a long time when its URL carries a content hash,
+// and requires revalidation when it does not.
+//
+// Only the files linked from the page itself are stamped. The modules those
+// files import in turn are not, because rewriting import specifiers inside
+// JavaScript is a parser's job and not a string replacement's. Those must
+// therefore revalidate, or the same stale-script failure returns by a longer
+// route: a fresh par.js importing last week's stadium.js. A revalidation that
+// answers 304 costs a round trip and no bytes, which is the right price for a
+// file that changes when the game does.
 func cacheFor(d time.Duration, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", int(d.Seconds())))
+		if r.URL.Query().Get("v") != "" {
+			w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", int(d.Seconds())))
+		} else {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

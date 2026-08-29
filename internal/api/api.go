@@ -139,10 +139,11 @@ func statusFor(err error) (int, string) {
 // client could compute every ball before choosing a bowler, and the entire game
 // would be solvable offline.
 type PuzzleView struct {
-	Date      string       `json:"date"`
-	Target    int          `json:"target"`
-	Venue     string       `json:"venue"`
-	Attack    []PlayerView `json:"attack"`
+	Date      string        `json:"date"`
+	Target    int           `json:"target"`
+	Venue     string        `json:"venue"`
+	Ground    engine.Ground `json:"ground"`
+	Attack    []PlayerView  `json:"attack"`
 	Batting   []PlayerView `json:"batting"`
 	Validated bool         `json:"validated"`
 
@@ -159,6 +160,17 @@ type PlayerView struct {
 	Name  string `json:"name"`
 	Style string `json:"style"`
 	Hand  string `json:"hand"`
+	Team  string `json:"team"`
+	Years string `json:"years"`
+	Mark  string `json:"mark"`
+}
+
+func viewOfPlayer(i int, p sim.Player) PlayerView {
+	return PlayerView{
+		Index: i, Name: p.Name,
+		Style: engine.ClassName(p.Class), Hand: engine.HandName(p.Hand),
+		Team: p.Team, Years: p.Years, Mark: engine.Monogram(p.Name),
+	}
 }
 
 func (s *Server) puzzleFor(date string) (*sim.Puzzle, sim.DailyKey, bool, error) {
@@ -201,17 +213,19 @@ func (s *Server) handleToday(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) viewOf(date string, p *sim.Puzzle, validated bool) PuzzleView {
+	venue := s.Engine.VenueName(p.Venue)
 	v := PuzzleView{
 		Date:      date,
 		Target:    int(p.Target),
-		Venue:     s.Engine.VenueName(p.Venue),
+		Venue:     venue,
+		Ground:    engine.GroundOf(venue),
 		Validated: validated,
 	}
 	for i, b := range p.Attack {
-		v.Attack = append(v.Attack, PlayerView{Index: i, Name: b.Name, Style: engine.ClassName(b.Class)})
+		v.Attack = append(v.Attack, viewOfPlayer(i, b))
 	}
 	for i, b := range p.Batting {
-		v.Batting = append(v.Batting, PlayerView{Index: i, Name: b.Name, Hand: engine.HandName(b.Hand)})
+		v.Batting = append(v.Batting, viewOfPlayer(i, b))
 	}
 	return v
 }
@@ -276,9 +290,13 @@ type StateView struct {
 	// two people, and which of them is at the other end matters to the next
 	// decision.
 	Striker         string   `json:"striker"`
+	StrikerTeam     string   `json:"striker_team"`
+	StrikerMark     string   `json:"striker_mark"`
 	StrikerBalls    int      `json:"striker_balls"`
 	StrikerRuns     int      `json:"striker_runs"`
 	NonStriker      string   `json:"non_striker"`
+	NonStrikerTeam  string   `json:"non_striker_team"`
+	NonStrikerMark  string   `json:"non_striker_mark"`
 	NonStrikerBalls int      `json:"non_striker_balls"`
 	NonStrikerRuns  int      `json:"non_striker_runs"`
 	LegalBowlers    []int    `json:"legal_bowlers"`
@@ -317,10 +335,14 @@ func (s *Server) stateOf(run *session.Run) StateView {
 		ChaseGrid:    gradesOf(run.ChaseOvers),
 	}
 	if !st.Done {
-		v.Striker = st.Puzzle.Batting[st.Striker].Name
+		on := st.Puzzle.Batting[st.Striker]
+		off := st.Puzzle.Batting[st.NonStriker]
+		v.Striker, v.StrikerTeam = on.Name, on.Team
+		v.StrikerMark = engine.Monogram(on.Name)
 		v.StrikerBalls = int(st.BallsFaced[st.Striker])
 		v.StrikerRuns = int(st.RunsScored[st.Striker])
-		v.NonStriker = st.Puzzle.Batting[st.NonStriker].Name
+		v.NonStriker, v.NonStrikerTeam = off.Name, off.Team
+		v.NonStrikerMark = engine.Monogram(off.Name)
 		v.NonStrikerBalls = int(st.BallsFaced[st.NonStriker])
 		v.NonStrikerRuns = int(st.RunsScored[st.NonStriker])
 	}

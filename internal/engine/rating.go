@@ -26,6 +26,9 @@ type Rated struct {
 	Name   string          `json:"name"`
 	Style  string          `json:"style"`
 	Hand   string          `json:"hand"`
+	Team   string          `json:"team"`  // the side they are best known for
+	Years  string          `json:"years"` // the seasons they played across
+	Mark   string          `json:"mark"`  // initials, for the monogram tile
 	Cost   int             `json:"cost"`
 	Rating float64         `json:"rating"` // 0 to 100, higher is better
 	Note   string          `json:"note"`   // a plain-language reason for the price
@@ -40,6 +43,12 @@ type Rated struct {
 // constraint at all. Measured against the current pool the bowling squads run
 // 49 to 74 credits and the batting squads 66 to 99, so the budgets sit near the
 // lower third of each: enough to afford one or two of the best, never five.
+//
+// Re-measured after the draft was opened to every era: the bowling squads now
+// run 45 to 85 credits and the batting squads 71 to 114, so both budgets still
+// sit a little over 40% of the way up their range and the constraint is
+// unchanged. Adding the retired players widened the range at both ends rather
+// than shifting it.
 const (
 	BowlerBudget = 62
 	BatterBudget = 90
@@ -192,11 +201,19 @@ const (
 //
 // Everyone with a real record in the role is offered, sorted by price, so the
 // choice is genuinely open rather than a short list somebody else drew up.
+//
+// The whole history is on offer, not the current squads. The daily puzzle deals
+// from recent seasons because it is meant to be a game about cricket as it is
+// played now, but choosing a side is a different pleasure, and a draft that
+// cannot field Gayle or Malinga is missing most of what people would want from
+// it. Their rates are as well measured as anybody's; they simply stopped
+// accumulating. Each player therefore carries the years they played, so an
+// unfamiliar name is placed rather than merely listed.
 func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 	vols := e.store.Volumes()
 
 	for _, id := range e.bowlers {
-		if vols[id].LastSeason < recentSince || vols[id].BallsBowled < draftMinBallsBowled {
+		if vols[id].BallsBowled < draftMinBallsBowled {
 			continue
 		}
 		q, note := e.bowlerQuality(id)
@@ -206,12 +223,13 @@ func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 		p := e.player(id)
 		bowl = append(bowl, Rated{
 			ID: id, Name: p.Name, Style: ClassName(p.Class),
+			Team: p.Team, Years: p.Years, Mark: Monogram(p.Name),
 			Cost: costOf(q), Rating: math.Round(q * 100), Note: note,
 		})
 	}
 	for _, id := range e.batters {
 		v := vols[id]
-		if v.LastSeason < recentSince || v.BallsFaced < draftMinBallsFaced {
+		if v.BallsFaced < draftMinBallsFaced {
 			continue
 		}
 		if v.Innings == 0 || float64(v.BallsFaced)/float64(v.Innings) < draftMinBallsPerInnings {
@@ -226,6 +244,7 @@ func (e *Engine) DraftPool(bowlers, batters int) (bowl, bat []Rated) {
 		p := e.player(id)
 		bat = append(bat, Rated{
 			ID: id, Name: p.Name, Hand: HandName(p.Hand),
+			Team: p.Team, Years: p.Years, Mark: Monogram(p.Name),
 			Cost: costOf(q), Rating: math.Round(q * 100), Note: note,
 		})
 	}

@@ -28,6 +28,90 @@ function monogram(name) {
   const b = (last.match(/[A-Za-z]/) || [''])[0];
   return (a + b).toUpperCase() || last.slice(0, 2).toUpperCase();
 }
+/* The ground ---------------------------------------------------------------
+ *
+ * A picture of the venue, rendered once on the client and then left alone. The
+ * renderer hands back an image rather than a live canvas, so what sits on the
+ * page is an <img> and the page can go idle the moment it has loaded.
+ *
+ * Images are cached by ground, because the same venue comes back every time the
+ * daily puzzle is reopened and rendering it twice would be pure waste.
+ *
+ * The module is imported on demand. It carries three.js with it, which is by
+ * far the largest thing the page can load, and somebody who only ever reads the
+ * menu should never pay for it.
+ */
+const groundImages = new Map();
+let stadiumModule;
+
+// ?stadium=off disables the ground entirely. Keeping the switch in the product
+// rather than in a scratch build means the page can always be reduced to the
+// part that matters, which is the puzzle, on a machine or a browser where the
+// render turns out to be a problem.
+const STADIUM_OFF = new URLSearchParams(location.search).get('stadium') === 'off';
+
+function loadStadium() {
+  if (STADIUM_OFF) return Promise.resolve(null);
+  if (!stadiumModule) {
+    stadiumModule = import('/static/stadium.js').catch(() => null);
+  }
+  return stadiumModule;
+}
+
+async function showGround(hostSelector, ground) {
+  const panel = document.querySelector(hostSelector + ' .ground');
+  const host = document.querySelector(hostSelector + ' [data-stadium-host]');
+  if (!host || !ground || !ground.name) return;
+
+  const fail = () => panel?.classList.add('no-stage');
+  if (STADIUM_OFF) return fail();
+
+  const key = `${ground.name}|${ground.straight}|${ground.square}|${ground.tiers}|${ground.roof}|${ground.lights}`;
+  let url = groundImages.get(key);
+
+  if (url === null) return fail(); // tried before, and it did not work
+  if (url === undefined) {
+    const mod = await loadStadium();
+    if (!mod) {
+      groundImages.set(key, null);
+      return fail();
+    }
+    // Let the screen paint before the render takes the main thread. The
+    // fixture, the attack and the button are what the reader wants first, and
+    // holding them back behind a picture would be exactly the wrong order.
+    await sleep(60);
+    // The panel's own size, so the render matches what will be shown.
+    const w = Math.max(host.clientWidth || 640, 320);
+    const h = Math.max(host.clientHeight || 360, 180);
+    url = await mod.renderGround(ground, w, h);
+    groundImages.set(key, url ?? null);
+    if (!url) return fail();
+  }
+
+  panel?.classList.remove('no-stage');
+  const img = document.createElement('img');
+  img.className = 'stadium';
+  img.alt = `${ground.name}, seen from square of the wicket`;
+  img.src = url;
+  host.replaceChildren(img);
+}
+
+// fillGroundPlate writes the ground's name and measurements alongside it. The
+// boundary lengths are there because they are part of the puzzle: the same
+// target is a different problem at Chinnaswamy and at Chepauk.
+function fillGroundPlate(prefix, ground) {
+  if (!ground) return;
+  el(prefix + '-venue').textContent = ground.name || '';
+  const city = el(prefix + '-city');
+  if (city) city.textContent = ground.city || '';
+  const dims = el(prefix + '-dims');
+  if (dims) {
+    dims.textContent = ground.straight
+      ? `${ground.straight} m straight · ${ground.square} m square`
+      : '';
+  }
+}
+
 const sleep = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
 
 const state = {
@@ -73,10 +157,28 @@ function showError(message) {
 
 function clearError() { el('error').hidden = true; }
 
+// show swaps the visible screen, and lets the incoming one arrive.
+//
+// The entrance is deliberately slight: a short rise and a fade, on the same
+// curve everywhere. A page that slides its whole contents around on every tap
+// is tiring by the third puzzle, whereas no transition at all makes a single
+// long page feel like five unrelated ones.
 function show(name) {
+  const target = `screen-${name}`;
   for (const id of ['screen-menu', 'screen-draft', 'screen-start', 'screen-play', 'screen-result']) {
-    el(id).hidden = id !== `screen-${name}`;
+    const node = el(id);
+    const wanted = id === target;
+    if (wanted && node.hidden) {
+      node.hidden = false;
+      node.classList.remove('entering');
+      void node.offsetWidth;
+      node.classList.add('entering');
+    } else if (!wanted) {
+      node.hidden = true;
+      node.classList.remove('entering');
+    }
   }
+  window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
   clearError();
 }
 
@@ -110,23 +212,62 @@ function showPuzzle(p) {
 
   el('start-mode').textContent = MODE_LABEL[state.mode] || '';
   el('start-target').textContent = p.target;
-  el('start-venue').textContent = p.venue;
   el('start-need').textContent = `${p.target} runs`;
   el('start-unvalidated').hidden = p.validated;
 
+  const ground = p.ground || { name: p.venue };
+  fillGroundPlate('start', ground);
+  el('start-ground-note').textContent = ground.note || '';
+
   const list = el('start-attack');
   list.replaceChildren();
-  for (const b of p.attack) {
+  p.attack.forEach((b, i) => {
     const li = document.createElement('li');
-    const name = document.createElement('span');
-    name.textContent = b.name;
-    const style = document.createElement('span');
-    style.className = 'style';
-    style.textContent = b.style;
-    li.append(name, style);
+    li.style.setProperty('--i', String(i));
+    li.append(markTile(b), whoBlock(b.name, b.team, b.style));
     list.append(li);
-  }
+  });
   show('start');
+  showGround('#screen-start', ground);
+}
+
+// markTile is the monogram square that stands in for a photograph. Match
+// photography belongs to picture agencies and there is no licensed source for
+// it, so initials set in the board's own face are both honest and a better fit.
+function markTile(p) {
+  const tile = document.createElement('span');
+  tile.className = 'mark';
+  tile.textContent = p.mark || monogram(p.name);
+  return tile;
+}
+
+// whoBlock is a name with the side they are known for underneath it. The team
+// is what places an unfamiliar name, especially now that the draft reaches back
+// to players who retired a decade ago.
+function whoBlock(name, team, sub) {
+  const wrap = document.createElement('span');
+  wrap.className = 'who';
+
+  const line = document.createElement('span');
+  line.className = 'who-name';
+  line.textContent = name;
+  wrap.append(line);
+
+  const under = document.createElement('span');
+  under.className = 'who-sub';
+  if (team) {
+    const badge = document.createElement('span');
+    badge.className = 'team';
+    badge.textContent = team;
+    under.append(badge);
+  }
+  if (sub) {
+    const style = document.createElement('span');
+    style.textContent = sub;
+    under.append(style);
+  }
+  wrap.append(under);
+  return wrap;
 }
 
 // pending holds the run opened by the server but not yet begun by the player,
@@ -171,12 +312,18 @@ async function loadDraft() {
 
     renderPicks('draft-bowlers', d.bowlers, state.pickedBowlers, d.pick_bowlers, d.bowler_budget);
     renderPicks('draft-batters', d.batters, state.pickedBatters, d.pick_batters, d.batter_budget);
-    el('hint-bowlers').textContent = `pick 5 of ${d.bowlers.length}`;
-    el('hint-batters').textContent = `pick 6 of ${d.batters.length}`;
+    el('hint-bowlers').textContent = `pick ${d.pick_bowlers} of ${d.bowlers.length}`;
+    el('hint-batters').textContent = `pick ${d.pick_batters} of ${d.batters.length}`;
     wireSearch('search-bowlers', 'draft-bowlers');
     wireSearch('search-batters', 'draft-batters');
     updateBudget();
+
+    const ground = d.ground || { name: d.venue };
+    el('draft-target').textContent = d.target;
+    fillGroundPlate('draft', ground);
+
     show('draft');
+    showGround('#screen-draft', ground);
   } catch (err) {
     showError(err.message);
   }
@@ -191,6 +338,8 @@ function wireSearch(inputID, containerID) {
     const q = input.value.trim().toLowerCase();
     for (const btn of el(containerID).children) {
       const name = btn.querySelector('.pick-name').textContent.toLowerCase();
+      // The subtitle carries the team, the style and the years, so searching
+      // "csk" or "2011" finds a side as readily as searching a surname does.
       const style = btn.querySelector('.pick-style').textContent.toLowerCase();
       // A selected player always stays visible, so a filter cannot hide part of
       // the side being assembled.
@@ -222,13 +371,17 @@ function renderPicks(containerID, pool, picked, limit, budget) {
 
     const style = document.createElement('span');
     style.className = 'pick-style';
-    style.textContent = p.style || p.hand || '';
+    // The years place a name the reader may not know. Somebody who last played
+    // in 2013 is a different proposition from somebody in the side now, and the
+    // price alone does not say which is which.
+    style.textContent = [p.team, p.style || p.hand, p.years]
+      .filter(Boolean).join(' · ');
 
     const cost = document.createElement('span');
     cost.className = 'pick-cost';
     cost.textContent = `${p.cost} cr`;
 
-    btn.append(name, style, cost);
+    btn.append(markTile(p), name, style, cost);
     btn.title = p.note || '';
     btn.onclick = () => togglePick(p, picked, pool, limit, budget, containerID);
     wrap.append(btn);
@@ -317,6 +470,45 @@ function paintStrip(id, grades, runs, currentOver) {
 
 /* Rendering --------------------------------------------------------------- */
 
+/* Motion ------------------------------------------------------------------
+ *
+ * The rule throughout: a number that changes should be seen to change. A score
+ * that jumps from 41 to 58 between frames reads as a redraw; the same score
+ * counted up over a third of a second reads as runs being scored, which is what
+ * it is. Everything here is short, none of it blocks a decision, and all of it
+ * is skipped under prefers-reduced-motion.
+ */
+
+// roll counts an element from its current value to a new one.
+function roll(node, to, ms = 340) {
+  const from = Number(node.textContent.replace(/[^0-9-]/g, ''));
+  if (REDUCED || !Number.isFinite(from) || from === to || Math.abs(to - from) > 200) {
+    node.textContent = String(to);
+    return;
+  }
+  const started = performance.now();
+  const step = (now) => {
+    const t = Math.min((now - started) / ms, 1);
+    // Ease out: fast first, settling at the end, which is how a scoreboard
+    // ticker behaves.
+    const eased = 1 - Math.pow(1 - t, 3);
+    node.textContent = String(Math.round(from + (to - from) * eased));
+    if (t < 1) requestAnimationFrame(step);
+    else node.textContent = String(to);
+  };
+  requestAnimationFrame(step);
+}
+
+// bump flashes an element to acknowledge that it changed.
+function bump(node, cls = 'bumped') {
+  if (REDUCED || !node) return;
+  node.classList.remove(cls);
+  // Reading the layout forces the class removal to take effect, so the
+  // animation restarts rather than being ignored as a no-op.
+  void node.offsetWidth;
+  node.classList.add(cls);
+}
+
 function render(s) {
   state.decisions = s.decisions;
   state.half = s.half;
@@ -332,18 +524,35 @@ function render(s) {
     : 'YOU ARE BOWLING · stop them reaching the target';
   el('phase-banner').classList.toggle('batting', chasing);
 
-  el('sb-score').textContent = s.score;
+  roll(el('sb-score'), s.score);
+  if (el('sb-wkts').textContent !== String(s.wickets)) bump(el('scoreboard-wrap'), 'lost');
   el('sb-wkts').textContent = s.wickets;
   el('over-no').innerHTML =
     `OVER ${Math.min(s.over + 1, 20)} <span class="of-twenty">of 20</span>`;
 
-  setBatter('striker', s.striker, s.striker_runs, s.striker_balls);
-  setBatter('nonstriker', s.non_striker, s.non_striker_runs, s.non_striker_balls);
+  setBatter('striker', s.striker, s.striker_team, s.striker_mark,
+    s.striker_runs, s.striker_balls);
+  setBatter('nonstriker', s.non_striker, s.non_striker_team, s.non_striker_mark,
+    s.non_striker_runs, s.non_striker_balls);
 
   el('sb-need-label').textContent = chasing ? 'YOU NEED' : 'THEY NEED';
   el('sb-need').textContent = `${s.runs_needed} off ${s.balls_left}`;
   el('sb-wp-label').textContent = chasing ? 'YOU WIN' : 'YOU HOLD';
-  el('sb-wp').textContent = `${Math.round(100 * s.win_probability)}%`;
+  const wp = Math.round(100 * s.win_probability);
+  const wpNode = el('sb-wp');
+  // An em dash strips to an empty string, and Number('') is 0, which would
+  // paint the very first reading green as though it had risen from nothing.
+  const previous = wpNode.textContent.replace(/[^0-9-]/g, '');
+  const was = previous === '' ? NaN : Number(previous);
+  roll(wpNode, wp);
+  // The suffix is restored after the count finishes, so the roll animates a
+  // plain number and the reader still sees a percentage.
+  setTimeout(() => { wpNode.textContent = `${wp}%`; }, REDUCED ? 0 : 360);
+  if (Number.isFinite(was)) {
+    wpNode.classList.toggle('rising', wp > was);
+    wpNode.classList.toggle('falling', wp < was);
+  }
+  el('sb-meter-fill').style.width = `${wp}%`;
 
   el('strip-chase-row').hidden = !chasing;
   paintStrip('strip-defend', s.defend_grid || [], overRuns.defend, chasing ? -1 : s.over);
@@ -356,9 +565,10 @@ function render(s) {
   else renderBowlers(s);
 }
 
-function setBatter(which, name, runs, balls) {
-  el(`mark-${which}`).textContent = monogram(name);
+function setBatter(which, name, team, mark, runs, balls) {
+  el(`mark-${which}`).textContent = mark || monogram(name);
   el(`name-${which}`).textContent = name || '—';
+  el(`team-${which}`).textContent = team || '';
   el(`figs-${which}`).textContent = name ? `${runs} (${balls})` : '';
 }
 
@@ -377,13 +587,7 @@ function renderBowlers(s) {
     card.disabled = !legal || state.busy;
     card.onclick = () => playOver('defend', { bowler_id: i, decisions: state.decisions });
 
-    const name = document.createElement('span');
-    name.className = 'bowler-name';
-    name.textContent = b.name;
-
-    const style = document.createElement('span');
-    style.className = 'bowler-style';
-    style.textContent = b.style;
+    card.style.setProperty('--i', String(i));
 
     const pips = document.createElement('span');
     pips.className = 'pips';
@@ -392,8 +596,9 @@ function renderBowlers(s) {
       pip.className = k < used ? 'pip used' : 'pip';
       pips.append(pip);
     }
-    card.setAttribute('aria-label', `${b.name}, ${b.style}, ${used} of 4 overs bowled`);
-    card.append(name, style, pips);
+    card.setAttribute('aria-label',
+      `${b.name}, ${b.style}, ${used} of 4 overs bowled`);
+    card.append(markTile(b), whoBlock(b.name, b.team, b.style), pips);
     wrap.append(card);
   });
 }

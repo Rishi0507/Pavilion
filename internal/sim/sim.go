@@ -41,6 +41,13 @@ type Player struct {
 	Name  string
 	Hand  attr.Hand
 	Class attr.BowlClass
+
+	// Team is the side the player is best known for, abbreviated, and Years is
+	// the span they played across. Neither affects a single ball; they are here
+	// so that the names on screen are recognisable as people rather than rows,
+	// which for a player who retired a decade ago is most of what places them.
+	Team  string
+	Years string
 }
 
 // Puzzle is one day's fixed problem. It is identical for every player.
@@ -82,7 +89,7 @@ func (i Intent) lambda() float64 {
 	case Block:
 		return -0.30
 	case Attack:
-		return 0.30
+		return 0.34
 	}
 	return 0
 }
@@ -93,7 +100,8 @@ func (i Intent) lambda() float64 {
 const ParRate = 8.5
 
 // recklessness is how much extra a wicket costs for attacking when the chase
-// did not require it.
+// did not require it, and freeRate is the required rate below which that cost
+// starts to apply at all.
 //
 // A fixed tilt made the timing of the attacking overs worth nothing: spending
 // them in the first six overs and spending them in the last six both chased
@@ -104,9 +112,21 @@ const ParRate = 8.5
 // risk the situation already forced on you.
 //
 // So the run side of attacking stays constant and the wicket side does not.
-// With the rate comfortably below par the extra danger is large, and it fades
-// to nothing once the chase demands the runs anyway.
-const recklessness = 1.4
+// The first attempt at this overcorrected. Measured over the middle overs, an
+// attacking over bought about 1.2 extra runs and, with the rate under control,
+// almost three times the chance of a wicket: at a required rate of three the
+// wicket chance went from 2.8% to 7.9%, which is not a decision anybody should
+// make and so not a decision worth offering. Worse, the penalty began at par
+// itself, so an ordinary chase that was merely on schedule was already being
+// charged for aggression.
+//
+// The cost now starts only once the chase is comfortably ahead of the rate, and
+// it is roughly a third of what it was. Attacking is a genuine choice across
+// most of an innings and a bad one only when the runs are not needed.
+const (
+	recklessness = 1.8
+	freeRate     = 7.0
+)
 
 // riskFactor returns the multiplier on the chance of a wicket for an intent, in
 // a chase needing a given rate.
@@ -114,12 +134,12 @@ func riskFactor(i Intent, required float64) float64 {
 	if i != Attack {
 		return 1
 	}
-	if required >= ParRate {
+	if required >= freeRate {
 		return 1
 	}
-	// Zero when the rate is at par, rising as the chase gets easier and
-	// attacking becomes less and less necessary.
-	surplus := (ParRate - required) / ParRate
+	// Zero at the free rate, rising as the chase gets easier and attacking
+	// becomes less and less necessary.
+	surplus := (freeRate - required) / freeRate
 	return 1 + recklessness*surplus
 }
 
@@ -176,7 +196,7 @@ var aggressionValue = []float64{
 	corpus.Three:  1.5,
 	corpus.Four:   2.0,
 	corpus.Six:    3.0,
-	corpus.Wicket: 2.0,
+	corpus.Wicket: 1.5,
 	corpus.Wide:   0,
 	corpus.NoBall: 0,
 }

@@ -55,9 +55,23 @@
   <section class="card" id="screen-draft" hidden>
     <h2 class="rule-heading">Pick your side</h2>
     <p class="prose subtle">
-      Every player has a price. The budget will not stretch to five good
-      bowlers, so something has to give.
+      Every player who has ever played enough of it, from any season. Each has a
+      price, and the budget will not stretch to five good bowlers, so something
+      has to give.
     </p>
+
+    <div class="ground ground-slim" id="ground-draft">
+      <div class="ground-stage" data-stadium-host></div>
+      <div class="ground-plate">
+        <span class="ground-name" id="draft-venue">—</span>
+        <span class="ground-city" id="draft-city"></span>
+        <span class="ground-dims" id="draft-dims"></span>
+      </div>
+      <div class="ground-target">
+        <span class="label">TARGET</span>
+        <span class="target-figure" id="draft-target">—</span>
+      </div>
+    </div>
 
     <div class="budget-bar">
       <div>
@@ -89,16 +103,20 @@
   <section class="card" id="screen-start" hidden>
     <p class="mode-tag" id="start-mode">—</p>
 
-    <div class="fixture">
-      <div class="fixture-target">
+    <div class="ground" id="ground-start">
+      <div class="ground-stage" data-stadium-host></div>
+      <div class="ground-plate">
+        <span class="ground-name" id="start-venue">—</span>
+        <span class="ground-city" id="start-city"></span>
+        <span class="ground-dims" id="start-dims"></span>
+      </div>
+      <div class="ground-target">
         <span class="label">TARGET</span>
         <span class="target-figure" id="start-target">—</span>
       </div>
-      <div class="fixture-venue">
-        <span class="label">GROUND</span>
-        <span id="start-venue">—</span>
-      </div>
     </div>
+
+    <p class="ground-note" id="start-ground-note"></p>
 
     <p class="prose">
       You are <b>bowling first</b>. They need <span id="start-need">—</span> to
@@ -133,6 +151,7 @@
         <span class="label" id="sb-wp-label">DEFENDING</span>
         <span class="sb-wp-figure" id="sb-wp">—</span>
       </div>
+      <div class="sb-meter" aria-hidden="true"><span id="sb-meter-fill"></span></div>
     </div>
 
     <div class="strip-wrap">
@@ -154,13 +173,19 @@
     <div class="crease" id="crease">
       <div class="bat" id="bat-striker">
         <span class="mark" id="mark-striker">—</span>
-        <span class="bat-name" id="name-striker">—</span>
+        <span class="bat-who">
+          <span class="bat-name" id="name-striker">—</span>
+          <span class="bat-team" id="team-striker"></span>
+        </span>
         <span class="bat-figs" id="figs-striker">—</span>
         <span class="on-strike">on strike</span>
       </div>
       <div class="bat" id="bat-nonstriker">
         <span class="mark" id="mark-nonstriker">—</span>
-        <span class="bat-name" id="name-nonstriker">—</span>
+        <span class="bat-who">
+          <span class="bat-name" id="name-nonstriker">—</span>
+          <span class="bat-team" id="team-nonstriker"></span>
+        </span>
         <span class="bat-figs" id="figs-nonstriker">—</span>
       </div>
     </div>

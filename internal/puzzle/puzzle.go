@@ -34,6 +34,16 @@ type Criteria struct {
 	// percent; this is wider because both halves must land in the band at once
 	// and a narrow window rejects almost everything, starving the queue. A day
 	// at 62 percent is a good day; a day at 85 percent is a wasted one.
+	//
+	// Widened again from [0.35, 0.65] after attacking was rebalanced. The two
+	// halves do not sum to one — defending against a competent chase and
+	// chasing against a competent attack are different problems — and making an
+	// attacking over worth spending moved the two curves apart. Measured across
+	// the target range, the crossing now sits near 205, where defending wins
+	// about 33% and chasing about 38%. Neither of those is a foregone
+	// conclusion, which is the thing this bound exists to test, and yet the old
+	// window rejected every day in a seven-day run. The number was mine rather
+	// than the brief's, so the number moved.
 	MinWinRate float64
 	MaxWinRate float64
 
@@ -58,8 +68,8 @@ type Criteria struct {
 
 // DefaultCriteria is what the pipeline ships with.
 var DefaultCriteria = Criteria{
-	MinWinRate:        0.35,
-	MaxWinRate:        0.65,
+	MinWinRate:        0.30,
+	MaxWinRate:        0.70,
 	MinDecisionSpread: 0.018,
 	Games:             1200,
 }

@@ -33,6 +33,11 @@ type Engine struct {
 	dealable []corpus.PlayerID
 	bowlers  []corpus.PlayerID
 	batters  []corpus.PlayerID
+
+	// Career labels, computed once at boot because they need a full scan of the
+	// delivery table and never change afterwards.
+	teams []string
+	years []string
 }
 
 // Paths locates every artifact the engine needs.
@@ -93,6 +98,7 @@ func New(p Paths) (*Engine, error) {
 	batKnown := func(id string) bool { _, ok := attrs.BatOf(id); return ok }
 	bowlKnown := func(id string) bool { _, ok := attrs.BowlOf(id); return ok }
 	e.dealable, e.bowlers, e.batters, _ = st.Dealable(corpus.DefaultEligibility, batKnown, bowlKnown)
+	e.labelCareers()
 	return e, nil
 }
 
@@ -104,7 +110,72 @@ func (e *Engine) player(id corpus.PlayerID) sim.Player {
 	p := e.store.Players[id]
 	hand, _ := e.attrs.BatOf(p.CricsheetID)
 	class, _ := e.attrs.BowlOf(p.CricsheetID)
-	return sim.Player{ID: id, Name: p.Name, Hand: hand, Class: class}
+	pl := sim.Player{ID: id, Name: p.Name, Hand: hand, Class: class}
+	if int(id) < len(e.teams) {
+		pl.Team, pl.Years = e.teams[id], e.years[id]
+	}
+	return pl
+}
+
+// labelCareers records, for each player, the side they are best known for and
+// the years they played.
+//
+// "Best known for" is the most recent side by preference and the longest spell
+// as a tiebreak, which is how a supporter would answer: Chris Gayle is a
+// Bangalore batter even though he finished at Punjab, because that is where the
+// innings everyone remembers were played. Where the two disagree by a wide
+// margin the longer spell wins.
+func (e *Engine) labelCareers() {
+	careers := e.store.Careers()
+	e.teams = make([]string, len(careers))
+	e.years = make([]string, len(careers))
+
+	for id, spells := range careers {
+		if len(spells) == 0 {
+			continue
+		}
+		// Fold renames together before choosing, so eight years at Kings XI and
+		// two at Punjab Kings count as ten at one club.
+		type agg struct {
+			innings int
+			last    uint16
+		}
+		byClub := map[string]*agg{}
+		first, last := spells[0].FirstSeason, spells[0].LastSeason
+		for _, sp := range spells {
+			name := CanonicalTeam(e.store.Teams[sp.Team])
+			a, ok := byClub[name]
+			if !ok {
+				a = &agg{}
+				byClub[name] = a
+			}
+			a.innings += sp.Innings
+			if sp.LastSeason > a.last {
+				a.last = sp.LastSeason
+			}
+			first = min(first, sp.FirstSeason)
+			last = max(last, sp.LastSeason)
+		}
+
+		bestName, best := "", &agg{}
+		for name, a := range byClub {
+			// A spell twice as long as the most recent one is the one people
+			// name; otherwise recency wins.
+			switch {
+			case bestName == "",
+				a.innings > 2*best.innings,
+				a.last > best.last && 2*a.innings > best.innings:
+				bestName, best = name, a
+			}
+		}
+		e.teams[id] = ShortTeam(bestName)
+
+		if first == last {
+			e.years[id] = itoa(int(first))
+		} else {
+			e.years[id] = itoa(int(first)) + "–" + itoa(int(last))
+		}
+	}
 }
 
 // Probabilities implements sim.Predictor.

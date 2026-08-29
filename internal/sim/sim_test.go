@@ -756,6 +756,45 @@ func TestAttackingRiskDependsOnNeed(t *testing.T) {
 		}
 	})
 
+	// The balance the mechanic depends on, pinned.
+	//
+	// Attacking used to buy about 1.2 runs an over against up to three times the
+	// chance of a wicket, which made spending a token a mistake nearly
+	// everywhere and the whole budget something to be ignored. It now has to
+	// clear a real bar when the chase needs runs, and still has to be a mistake
+	// once the chase is already won, or the timing decision disappears in the
+	// other direction.
+	t.Run("attacking pays when runs are needed and costs when they are not", func(t *testing.T) {
+		// A wicket in the middle overs is worth roughly twelve runs of chase
+		// equity. The exact figure only sets the scale of the comparison.
+		const wicketWorth = 12.0
+
+		net := func(req float64) float64 {
+			atk := make([]float64, corpus.NumOutcomes)
+			rot := make([]float64, corpus.NumOutcomes)
+			ApplyIntent(base, Attack, req, atk)
+			ApplyIntent(base, Rotate, req, rot)
+			runs := func(p []float64) float64 {
+				return p[corpus.One] + 2*p[corpus.Two] + 3*p[corpus.Three] +
+					4*p[corpus.Four] + 6*p[corpus.Six]
+			}
+			dRuns := 6 * (runs(atk) - runs(rot))
+			dWkts := 6 * (atk[corpus.Wicket] - rot[corpus.Wicket])
+			return dRuns - wicketWorth*dWkts
+		}
+
+		for _, req := range []float64{freeRate, 8.5, 10, 12, 15} {
+			if v := net(req); v < 0.6 {
+				t.Errorf("at required %.1f an attacking over is worth %+.2f runs; "+
+					"nobody would spend a token for that", req, v)
+			}
+		}
+		if v := net(3.0); v > -0.5 {
+			t.Errorf("with the chase already won an attacking over is worth %+.2f runs; "+
+				"throwing the bat at it should cost something", v)
+		}
+	})
+
 	t.Run("attacking always scores faster than rotating", func(t *testing.T) {
 		runsOf := func(p []float64) float64 {
 			return p[corpus.One] + 2*p[corpus.Two] + 3*p[corpus.Three] +
