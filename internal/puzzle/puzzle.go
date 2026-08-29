@@ -16,6 +16,7 @@ package puzzle
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"runtime"
 	"sort"
@@ -323,4 +324,73 @@ func (q *Queue) For(date string) (Queued, bool) {
 		}
 	}
 	return Queued{}, false
+}
+
+// Pool is a set of validated situations that are not tied to a date.
+//
+// The daily puzzle is one problem shared by everyone, which is what makes
+// comparing results mean anything. Practice needs the opposite: a fresh
+// situation whenever someone wants one. Validating a situation costs a couple
+// of thousand simulated games, far too slow to do when a button is pressed, so
+// they are generated in advance and drawn from instantly.
+//
+// Everything in the pool has passed the same tests as a daily puzzle. A
+// practice game is not a lesser game; it simply does not count towards the
+// day's shared numbers.
+type Pool struct {
+	Generated  string   `json:"generated_at"`
+	Criteria   Criteria `json:"criteria"`
+	Situations []Queued `json:"situations"`
+}
+
+// Save writes the pool.
+func (p *Pool) Save(path string) error {
+	p.Generated = time.Now().UTC().Format(time.RFC3339)
+	b, err := json.MarshalIndent(p, "", "  ")
+	if err != nil {
+		return fmt.Errorf("puzzle: marshal pool: %w", err)
+	}
+	if err := os.WriteFile(path, append(b, '\n'), 0o644); err != nil {
+		return fmt.Errorf("puzzle: write %s: %w", path, err)
+	}
+	return nil
+}
+
+// LoadPool reads a validated pool.
+func LoadPool(path string) (*Pool, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("puzzle: read %s: %w", path, err)
+	}
+	var p Pool
+	if err := json.Unmarshal(b, &p); err != nil {
+		return nil, fmt.Errorf("puzzle: parse %s: %w", path, err)
+	}
+	return &p, nil
+}
+
+// Len reports how many situations the pool holds.
+func (p *Pool) Len() int {
+	if p == nil {
+		return 0
+	}
+	return len(p.Situations)
+}
+
+// Pick returns one situation, avoiding the one just played so a practice run
+// never immediately repeats itself.
+func (p *Pool) Pick(avoid string, r *rand.Rand) (Queued, bool) {
+	if p.Len() == 0 {
+		return Queued{}, false
+	}
+	if p.Len() == 1 {
+		return p.Situations[0], true
+	}
+	for range 12 {
+		q := p.Situations[r.IntN(len(p.Situations))]
+		if q.Date != avoid {
+			return q, true
+		}
+	}
+	return p.Situations[r.IntN(len(p.Situations))], true
 }

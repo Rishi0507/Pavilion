@@ -30,6 +30,7 @@ type Server struct {
 	Sessions *session.Store
 	DB       *store.DB
 	Queue    *puzzle.Queue
+	Pool     *puzzle.Pool
 	Secret   []byte
 	Log      *slog.Logger
 
@@ -56,6 +57,7 @@ func (s *Server) Routes(web http.Handler) http.Handler {
 	mux.HandleFunc("POST /api/v1/run/{id}/finish", s.handleFinish)
 	mux.HandleFunc("GET /api/v1/day/{date}/stats", s.handleDayStats)
 	mux.HandleFunc("GET /api/v1/day/{date}/leaderboard", s.handleLeaderboard)
+	mux.HandleFunc("GET /api/v1/draft", s.handleDraft)
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 
 	mux.Handle("/", web)
@@ -143,6 +145,12 @@ type PuzzleView struct {
 	Attack    []PlayerView `json:"attack"`
 	Batting   []PlayerView `json:"batting"`
 	Validated bool         `json:"validated"`
+
+	// Mode tells the page which of the three games this is, and Counts whether
+	// the result will join the day's shared numbers.
+	Mode        string `json:"mode"`
+	Counts      bool   `json:"counts"`
+	SituationID string `json:"situation_id"`
 }
 
 // PlayerView is one cricketer as the client sees them.
@@ -218,22 +226,39 @@ type StartResponse struct {
 }
 
 func (s *Server) handleStartRun(w http.ResponseWriter, r *http.Request) {
-	date := s.today()
-	p, key, validated, err := s.puzzleFor(date)
+	req, err := decodeStart(w, r)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "no puzzle available")
+		writeError(w, http.StatusBadRequest, "malformed request")
 		return
 	}
+
+	p, key, mode, validated, err := s.buildForMode(req)
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
+	// Only a daily run is dated, because only a daily run is compared with
+	// anyone else's.
+	date := s.today()
 	run, token, err := s.Sessions.Start(date, key, p)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not start a run")
 		return
 	}
+	run.Mode = string(mode)
+	run.Counts = mode.Counts()
+
+	view := s.viewOf(date, p, validated)
+	view.Mode = string(mode)
+	view.Counts = run.Counts
+	view.SituationID = p.Date
+
 	writeJSON(w, http.StatusOK, StartResponse{
 		RunID:     run.ID,
 		Token:     token,
 		Decisions: run.Decisions,
-		Puzzle:    s.viewOf(date, p, validated),
+		Puzzle:    view,
 		State:     s.stateOf(run),
 	})
 }
@@ -502,6 +527,8 @@ func bearer(r *http.Request) string {
 
 // FinishResponse is the share card.
 type FinishResponse struct {
+	Mode         string         `json:"mode"`
+	Counts       bool           `json:"counts"`
 	Date         string         `json:"date"`
 	Target       int            `json:"target"`
 	Defended     bool           `json:"defended"`
@@ -563,13 +590,21 @@ func (s *Server) handleFinish(w http.ResponseWriter, r *http.Request) {
 	target := int(run.State.Puzzle.Target)
 	defendGrid := gradesOf(run.DefendOvers)
 	chaseGrid := gradesOf(run.ChaseOvers)
+	counts := run.Counts
+	mode := run.Mode
 	release()
 
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	if err := s.DB.Save(ctx, res); err != nil && !errors.Is(err, store.ErrAlreadyPlayed) {
-		s.Log.Error("save result", "err", err)
+	// Only the daily run joins the shared numbers. Recording practice would
+	// let anyone move the day's percentages by replaying situations of their
+	// own choosing, which would make the one figure the game is built around
+	// mean nothing.
+	if counts {
+		if err := s.DB.Save(ctx, res); err != nil && !errors.Is(err, store.ErrAlreadyPlayed) {
+			s.Log.Error("save result", "err", err)
+		}
 	}
 
 	day, err := s.DB.Day(ctx, date)
@@ -586,6 +621,8 @@ func (s *Server) handleFinish(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := FinishResponse{
+		Mode:         mode,
+		Counts:       counts,
 		Date:         date,
 		Target:       target,
 		Defended:     res.Defended,

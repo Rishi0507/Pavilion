@@ -33,6 +33,8 @@ func main() {
 		confirm    = flag.Int("confirm", 4000, "simulated games used to confirm the chosen candidate")
 		sweep      = flag.Bool("sweep", false, "evaluate a range of targets and print the results instead of queueing")
 		verbose    = flag.Bool("v", false, "log every candidate")
+		pool       = flag.Int("pool", 0, "generate this many dateless situations for practice mode instead of daily puzzles")
+		poolOut    = flag.String("pool-out", filepath.Join("data", "out", "pool.json"), "practice situation pool")
 	)
 	flag.Parse()
 
@@ -45,6 +47,13 @@ func main() {
 	if *sweep {
 		if err := runSweep(log, *secret, *games); err != nil {
 			log.Error("sweep failed", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if *pool > 0 {
+		if err := runPool(log, *secret, *poolOut, *pool, *games); err != nil {
+			log.Error("pool generation failed", "err", err)
 			os.Exit(1)
 		}
 		return
@@ -90,6 +99,69 @@ func runSweep(log *slog.Logger, secret string, games int) error {
 				a, target, ev.DefendRate, ev.ChaseRate, ev.DecisionSpread, verdict)
 		}
 	}
+	return nil
+}
+
+// runPool fills the practice pool with validated situations that are not tied
+// to a date.
+//
+// It appends rather than replacing, so the pool can be grown a few situations
+// at a time instead of demanding one long run, and so a stopped run keeps
+// whatever it managed.
+func runPool(log *slog.Logger, secret, out string, want, games int) error {
+	e, err := engine.New(engine.DefaultPaths())
+	if err != nil {
+		return err
+	}
+	crit := puzzle.DefaultCriteria
+	crit.Games = games
+
+	p := &puzzle.Pool{Criteria: crit}
+	if existing, err := puzzle.LoadPool(out); err == nil {
+		p.Situations = existing.Situations
+		log.Info("existing pool loaded", "situations", len(p.Situations))
+	}
+
+	added, tried := 0, 0
+	for added < want {
+		tried++
+		id := fmt.Sprintf("p%d-%d", time.Now().UnixNano(), tried)
+		key, err := sim.DeriveDailyKey([]byte(secret), id)
+		if err != nil {
+			return err
+		}
+
+		built, err := e.BuildPuzzle(id, key, 180)
+		if err != nil {
+			return err
+		}
+		c := puzzle.Candidate{Attack: built.Attack, Batting: built.Batting, Venue: built.Venue}
+		c.Target = puzzle.SolveTarget(e, c, key, max(games/6, 120))
+
+		ev := puzzle.Evaluate(e, c, key, crit)
+		if !ev.Accepted {
+			log.Debug("rejected", "target", c.Target,
+				"defend", fmt.Sprintf("%.2f", ev.DefendRate),
+				"chase", fmt.Sprintf("%.2f", ev.ChaseRate),
+				"spread", fmt.Sprintf("%.4f", ev.DecisionSpread))
+			continue
+		}
+
+		p.Situations = append(p.Situations, queued(e, id, c, ev))
+		added++
+		log.Info("situation added",
+			"n", len(p.Situations), "target", c.Target,
+			"venue", e.Store().Venues[c.Venue],
+			"defend", fmt.Sprintf("%.0f%%", 100*ev.DefendRate),
+			"chase", fmt.Sprintf("%.0f%%", 100*ev.ChaseRate))
+
+		// Written after every acceptance, so stopping the run early still
+		// leaves a usable pool.
+		if err := p.Save(out); err != nil {
+			return err
+		}
+	}
+	log.Info("pool written", "path", out, "situations", len(p.Situations), "tried", tried)
 	return nil
 }
 

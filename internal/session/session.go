@@ -68,6 +68,12 @@ type Run struct {
 	// counter and it only ever increases.
 	Decisions int
 
+	// Mode is which of the three games this run belongs to, and Counts whether
+	// its result joins the day's shared numbers. Practice and drafted sides are
+	// played for their own sake.
+	Mode   string
+	Counts bool
+
 	DefendOvers  []Graded
 	ChaseOvers   []Graded
 	DefendResult sim.Result

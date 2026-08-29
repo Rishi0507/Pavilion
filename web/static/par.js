@@ -23,10 +23,15 @@ const state = {
   decisions: 0,
   half: 'defend',
   puzzle: null,
-  defendGrid: [],
-  chaseGrid: [],
+  mode: 'daily',
+  lastSituation: '',
+  draft: null,
+  pickedBowlers: [],
+  pickedBatters: [],
   busy: false,
 };
+
+const overRuns = { defend: [], chase: [] };
 
 /* Transport --------------------------------------------------------------- */
 
@@ -55,61 +60,192 @@ function showError(message) {
 
 function clearError() { el('error').hidden = true; }
 
-/* Screens ----------------------------------------------------------------- */
-
 function show(name) {
-  for (const id of ['screen-start', 'screen-play', 'screen-result']) {
+  for (const id of ['screen-menu', 'screen-draft', 'screen-start', 'screen-play', 'screen-result']) {
     el(id).hidden = id !== `screen-${name}`;
   }
+  clearError();
 }
 
-/* Start ------------------------------------------------------------------- */
+/* Menu -------------------------------------------------------------------- */
 
-async function loadToday() {
+async function loadMenu() {
   try {
     const p = await api('GET', '/api/v1/puzzle/today');
-    state.puzzle = p;
-
     el('dateline').textContent = p.date;
-    el('start-target').textContent = p.target;
-    el('start-venue').textContent = p.venue;
-    el('start-unvalidated').hidden = p.validated;
-
-    const list = el('start-attack');
-    list.replaceChildren();
-    for (const b of p.attack) {
-      const li = document.createElement('li');
-      const name = document.createElement('span');
-      name.textContent = b.name;
-      const style = document.createElement('span');
-      style.className = 'style';
-      style.textContent = b.style;
-      li.append(name, style);
-      list.append(li);
-    }
-    show('start');
+    el('menu-target').textContent = p.target;
+    show('menu');
   } catch (err) {
     showError(err.message);
   }
 }
 
-async function startRun() {
+/* Starting a run ---------------------------------------------------------- */
+
+const MODE_LABEL = {
+  daily: "Today's puzzle · counts towards the day's scores",
+  practice: 'Practice · this one is just for you',
+  draft: 'Your XI · this one is just for you',
+};
+
+// showPuzzle presents a situation before it is played, so the attack can be
+// read before the first decision rather than during it.
+function showPuzzle(p) {
+  state.puzzle = p;
+  state.mode = p.mode || 'daily';
+  if (p.situation_id) state.lastSituation = p.situation_id;
+
+  el('start-mode').textContent = MODE_LABEL[state.mode] || '';
+  el('start-target').textContent = p.target;
+  el('start-venue').textContent = p.venue;
+  el('start-need').textContent = `${p.target} runs`;
+  el('start-unvalidated').hidden = p.validated;
+
+  const list = el('start-attack');
+  list.replaceChildren();
+  for (const b of p.attack) {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = b.name;
+    const style = document.createElement('span');
+    style.className = 'style';
+    style.textContent = b.style;
+    li.append(name, style);
+    list.append(li);
+  }
+  show('start');
+}
+
+// pending holds the run opened by the server but not yet begun by the player,
+// so the attack can be studied first without the clock or the state moving.
+let pending = null;
+
+async function openRun(body) {
   clearError();
   try {
-    const r = await api('POST', '/api/v1/run', {});
-    state.runID = r.run_id;
-    state.token = r.token;
-    state.decisions = r.decisions;
-    state.half = r.state.half;
-    state.defendGrid = [];
-    state.chaseGrid = [];
-
-    buildStrips();
-    render(r.state);
-    show('play');
+    const r = await api('POST', '/api/v1/run', body);
+    pending = r;
+    showPuzzle(r.puzzle);
   } catch (err) {
     showError(err.message);
   }
+}
+
+function beginRun() {
+  if (!pending) return;
+  state.runID = pending.run_id;
+  state.token = pending.token;
+  state.decisions = pending.decisions;
+  state.half = pending.state.half;
+  overRuns.defend = [];
+  overRuns.chase = [];
+
+  buildStrips();
+  render(pending.state);
+  show('play');
+  pending = null;
+}
+
+/* Draft ------------------------------------------------------------------- */
+
+async function loadDraft() {
+  clearError();
+  try {
+    const d = await api('GET', '/api/v1/draft');
+    state.draft = d;
+    state.pickedBowlers = [];
+    state.pickedBatters = [];
+
+    renderPicks('draft-bowlers', d.bowlers, state.pickedBowlers, d.pick_bowlers, d.bowler_budget);
+    renderPicks('draft-batters', d.batters, state.pickedBatters, d.pick_batters, d.batter_budget);
+    updateBudget();
+    show('draft');
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function costOfPicked(pool, picked) {
+  return picked.reduce((sum, id) => {
+    const p = pool.find((x) => x.id === id);
+    return sum + (p ? p.cost : 0);
+  }, 0);
+}
+
+function renderPicks(containerID, pool, picked, limit, budget) {
+  const wrap = el(containerID);
+  wrap.replaceChildren();
+
+  for (const p of pool) {
+    const btn = document.createElement('button');
+    btn.className = 'pick';
+    btn.dataset.id = String(p.id);
+
+    const name = document.createElement('span');
+    name.className = 'pick-name';
+    name.textContent = p.name;
+
+    const style = document.createElement('span');
+    style.className = 'pick-style';
+    style.textContent = p.style || p.hand || '';
+
+    const cost = document.createElement('span');
+    cost.className = 'pick-cost';
+    cost.textContent = `${p.cost} cr`;
+
+    btn.append(name, style, cost);
+    btn.title = p.note || '';
+    btn.onclick = () => togglePick(p, picked, pool, limit, budget, containerID);
+    wrap.append(btn);
+  }
+  paintPicks(containerID, pool, picked, limit, budget);
+}
+
+function togglePick(p, picked, pool, limit, budget, containerID) {
+  const i = picked.indexOf(p.id);
+  if (i >= 0) {
+    picked.splice(i, 1);
+  } else {
+    if (picked.length >= limit) return;
+    if (costOfPicked(pool, picked) + p.cost > budget) return;
+    picked.push(p.id);
+  }
+  paintPicks(containerID, pool, picked, limit, budget);
+  updateBudget();
+}
+
+function paintPicks(containerID, pool, picked, limit, budget) {
+  const spent = costOfPicked(pool, picked);
+  for (const btn of el(containerID).children) {
+    const id = Number(btn.dataset.id);
+    const p = pool.find((x) => x.id === id);
+    const on = picked.includes(id);
+    btn.classList.toggle('on', on);
+    // A player is greyed out when picking them is impossible, either because
+    // the side is full or because they cost more than is left.
+    btn.disabled = !on && (picked.length >= limit || spent + p.cost > budget);
+  }
+}
+
+function updateBudget() {
+  const d = state.draft;
+  const bowlCost = costOfPicked(d.bowlers, state.pickedBowlers);
+  const batCost = costOfPicked(d.batters, state.pickedBatters);
+
+  el('draft-bowl-count').textContent = `${state.pickedBowlers.length}/${d.pick_bowlers}`;
+  el('draft-bat-count').textContent = `${state.pickedBatters.length}/${d.pick_batters}`;
+  el('draft-bowl-cost').textContent = `${bowlCost} / ${d.bowler_budget}`;
+  el('draft-bat-cost').textContent = `${batCost} / ${d.batter_budget}`;
+  el('draft-bowl-cost').classList.toggle('over', bowlCost > d.bowler_budget);
+  el('draft-bat-cost').classList.toggle('over', batCost > d.batter_budget);
+
+  const ready = state.pickedBowlers.length === d.pick_bowlers &&
+    state.pickedBatters.length === d.pick_batters;
+  el('btn-draft-start').disabled = !ready;
+  el('draft-note').textContent = ready
+    ? `Chasing ${d.target} at ${d.venue}.`
+    : `Pick ${d.pick_bowlers - state.pickedBowlers.length} more bowler(s) and ` +
+      `${d.pick_batters - state.pickedBatters.length} more batter(s).`;
 }
 
 /* The over strip ---------------------------------------------------------- */
@@ -121,11 +257,10 @@ function buildStrips() {
     for (let i = 0; i < 20; i++) {
       const box = document.createElement('div');
       box.className = 'box';
-      box.dataset.over = String(i);
       strip.append(box);
     }
   }
-  el('strip-chase').hidden = true;
+  el('strip-chase-row').hidden = true;
 }
 
 function paintStrip(id, grades, runs, currentOver) {
@@ -145,42 +280,36 @@ function paintStrip(id, grades, runs, currentOver) {
   }
 }
 
-const overRuns = { defend: [], chase: [] };
-
 /* Rendering --------------------------------------------------------------- */
 
 function render(s) {
   state.decisions = s.decisions;
   state.half = s.half;
 
-  // A finished run has no decision to offer and no innings in progress, so the
-  // play screen has nothing to draw. Rendering it anyway is what produced a
-  // crash on the very last over of the game, where it was most visible.
+  // A finished run has no innings in progress and no decision to offer, so the
+  // play screen has nothing to draw.
   if (s.half === 'finished') return;
+
+  const chasing = s.half === 'chase';
+
+  el('phase-banner').textContent = chasing
+    ? 'YOU ARE BATTING · get there yourself'
+    : 'YOU ARE BOWLING · stop them reaching the target';
+  el('phase-banner').classList.toggle('batting', chasing);
 
   el('sb-score').textContent = s.score;
   el('sb-wkts').textContent = s.wickets;
   el('over-no').textContent = `OVER ${Math.min(s.over + 1, 20)}`;
   el('striker').textContent = s.striker ? `${s.striker} (${s.striker_balls})` : '';
 
-  if (s.half === 'chase') {
-    el('sb-need-label').textContent = 'NEED';
-    el('sb-need').textContent = `${s.runs_needed} off ${s.balls_left}`;
-    el('sb-wp-label').textContent = 'WINNING';
-  } else {
-    el('sb-need-label').textContent = 'THEY NEED';
-    el('sb-need').textContent = `${s.runs_needed} off ${s.balls_left}`;
-    el('sb-wp-label').textContent = 'DEFENDING';
-  }
+  el('sb-need-label').textContent = chasing ? 'YOU NEED' : 'THEY NEED';
+  el('sb-need').textContent = `${s.runs_needed} off ${s.balls_left}`;
+  el('sb-wp-label').textContent = chasing ? 'YOU WIN' : 'YOU HOLD';
   el('sb-wp').textContent = `${Math.round(100 * s.win_probability)}%`;
 
-  state.defendGrid = s.defend_grid || [];
-  state.chaseGrid = s.chase_grid || [];
-
-  const chasing = s.half === 'chase';
-  el('strip-chase').hidden = !chasing;
-  paintStrip('strip-defend', state.defendGrid, overRuns.defend, chasing ? -1 : s.over);
-  paintStrip('strip-chase', state.chaseGrid, overRuns.chase, chasing ? s.over : -1);
+  el('strip-chase-row').hidden = !chasing;
+  paintStrip('strip-defend', s.defend_grid || [], overRuns.defend, chasing ? -1 : s.over);
+  paintStrip('strip-chase', s.chase_grid || [], overRuns.chase, chasing ? s.over : -1);
 
   el('controls-defend').hidden = chasing;
   el('controls-chase').hidden = !chasing;
@@ -196,12 +325,13 @@ function renderBowlers(s) {
   const legalIDs = s.legal_bowlers || [];
   (s.overs_bowled || []).forEach((used, i) => {
     const b = state.puzzle.attack[i];
+    if (!b) return;
     const legal = legalIDs.includes(i);
 
     const card = document.createElement('button');
     card.className = 'bowler';
     card.disabled = !legal || state.busy;
-    card.onclick = () => playDefendOver(i);
+    card.onclick = () => playOver('defend', { bowler_id: i, decisions: state.decisions });
 
     const name = document.createElement('span');
     name.className = 'bowler-name';
@@ -235,7 +365,7 @@ function renderIntents(s) {
   el('intent-attack').disabled = s.attacks_left === 0 || state.busy;
   for (const btn of document.querySelectorAll('.intent')) {
     if (btn.id !== 'intent-attack') btn.disabled = state.busy;
-    btn.onclick = () => playChaseOver(btn.dataset.intent);
+    btn.onclick = () => playOver('chase', { intent: btn.dataset.intent, decisions: state.decisions });
   }
 }
 
@@ -244,14 +374,6 @@ function renderIntents(s) {
 function setBusy(on) {
   state.busy = on;
   for (const b of document.querySelectorAll('.bowler, .intent')) b.disabled = on;
-}
-
-async function playDefendOver(bowler) {
-  await playOver('defend', { bowler_id: bowler, decisions: state.decisions });
-}
-
-async function playChaseOver(intent) {
-  await playOver('chase', { intent, decisions: state.decisions });
 }
 
 async function playOver(half, body) {
@@ -266,9 +388,7 @@ async function playOver(half, body) {
     const wasHalf = state.half;
     render(r.state);
 
-    if (wasHalf === 'defend' && r.state.half === 'chase') {
-      await handover(r);
-    }
+    if (wasHalf === 'defend' && r.state.half === 'chase') await handover();
     if (r.state.half === 'finished') {
       state.half = 'finished';
       await finish();
@@ -280,12 +400,8 @@ async function playOver(half, body) {
   }
 }
 
-/* The reveal.
- *
- * Six balls, one at a time, then a beat. This is the only orchestrated moment
- * in the interface, and it is deliberately the one that carries the drama: the
- * decision has already been made and cannot be taken back, so the pacing is
- * pure consequence. Reduced motion collapses it to an instant state change. */
+/* The reveal: six balls, then a beat. The decision has already been made and
+ * cannot be taken back, so the pacing is pure consequence. */
 
 async function revealOver(r) {
   const wrap = el('balls');
@@ -304,23 +420,19 @@ async function revealOver(r) {
 
   const summary = document.createElement('span');
   summary.className = 'over-summary';
-  const wkts = r.wickets === 1 ? '1 wicket' : `${r.wickets} wickets`;
   summary.textContent = `${r.bowler} · ${r.runs} run${r.runs === 1 ? '' : 's'}` +
-    (r.wickets ? `, ${wkts}` : '');
+    (r.wickets ? `, ${r.wickets} wicket${r.wickets === 1 ? '' : 's'}` : '');
   wrap.append(summary);
 
   await sleep(BEAT_MS);
 }
 
-async function handover(r) {
+async function handover() {
   const box = el('handover');
-  const res = r.state;
-  box.textContent = res.runs_needed > 0
-    ? `You defended it. Now chase the same target from the other chair.`
-    : `They got there. Now see if you can do it from the other chair.`;
+  box.textContent = 'Innings over. Now you bat, chasing the same target.';
   box.hidden = false;
   el('balls').replaceChildren();
-  await sleep(REDUCED ? 0 : 1200);
+  await sleep(REDUCED ? 0 : 1400);
   box.hidden = true;
 }
 
@@ -337,12 +449,14 @@ async function finish() {
     el('result-verdict').textContent = verdictOf(r);
     el('share').textContent = r.share;
     el('result-score').textContent = (r.total_score >= 0 ? '+' : '') + r.total_score.toFixed(0);
-    el('result-pct').textContent = r.day.runs > 1 ? `${Math.round(r.percentile)}` : '—';
-    el('result-streak').textContent = r.streak || '—';
+    el('result-pct').textContent = r.counts && r.day.runs > 1 ? Math.round(r.percentile) : '—';
+    el('result-streak').textContent = r.counts && r.streak ? r.streak : '—';
 
-    el('result-day').textContent = r.day.runs > 1
-      ? `${r.day.runs} people have played today. ${Math.round(100 * r.day.defend_rate)}% defended it, ${Math.round(100 * r.day.chase_rate)}% chased it.`
-      : 'You are the first to play today.';
+    el('result-day').textContent = !r.counts
+      ? 'Practice runs are not added to the day’s figures, so today’s puzzle is still there to play.'
+      : r.day.runs > 1
+        ? `${r.day.runs} people have played today. ${Math.round(100 * r.day.defend_rate)}% held the target, ${Math.round(100 * r.day.chase_rate)}% chased it down.`
+        : 'You are the first to play today.';
 
     el('btn-copy').onclick = () => copyShare(r.share);
     show('result');
@@ -352,10 +466,10 @@ async function finish() {
 }
 
 function verdictOf(r) {
-  if (r.defended && r.chased) return 'Both halves. Nobody does that twice.';
-  if (r.defended) return 'Defended it, could not chase it.';
-  if (r.chased) return 'Chased it down, could not defend it.';
-  return 'Neither half. Tomorrow, then.';
+  if (r.defended && r.chased) return 'Both halves. That is a good day.';
+  if (r.defended) return 'You held the target, but could not chase it.';
+  if (r.chased) return 'You chased it down, but could not hold it.';
+  return 'Neither half this time.';
 }
 
 async function copyShare(text) {
@@ -364,8 +478,8 @@ async function copyShare(text) {
     await navigator.clipboard.writeText(text);
     btn.textContent = 'Copied';
   } catch {
-    // Clipboard access is refused in plenty of ordinary situations, so fall
-    // back to selecting the text rather than telling the player it failed.
+    // Clipboard access is refused in plenty of ordinary situations, so select
+    // the text rather than reporting a failure the player cannot act on.
     const range = document.createRange();
     range.selectNodeContents(el('share'));
     const sel = window.getSelection();
@@ -378,6 +492,31 @@ async function copyShare(text) {
 
 /* Boot -------------------------------------------------------------------- */
 
-el('btn-start').onclick = startRun;
-el('btn-again').onclick = () => { clearError(); loadToday(); };
-loadToday();
+for (const btn of document.querySelectorAll('.mode')) {
+  btn.onclick = () => {
+    const mode = btn.dataset.mode;
+    if (mode === 'draft') loadDraft();
+    else openRun({ mode, avoid: state.lastSituation });
+  };
+}
+
+el('btn-start').onclick = beginRun;
+el('btn-start-back').onclick = loadMenu;
+el('btn-draft-back').onclick = loadMenu;
+
+el('btn-draft-start').onclick = () => openRun({
+  mode: 'draft',
+  bowler_ids: state.pickedBowlers,
+  batter_ids: state.pickedBatters,
+});
+
+// After a game: a different situation, the same one again, or back out.
+el('btn-new').onclick = () => openRun({ mode: 'practice', avoid: state.lastSituation });
+el('btn-same').onclick = () => {
+  // The daily puzzle is fixed, so replaying it means the same match; a practice
+  // situation gets a new key and therefore a genuinely different game.
+  openRun({ mode: state.mode === 'daily' ? 'daily' : state.mode, avoid: '' });
+};
+el('btn-menu').onclick = loadMenu;
+
+loadMenu();

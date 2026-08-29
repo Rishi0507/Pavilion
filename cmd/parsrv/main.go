@@ -30,22 +30,23 @@ import (
 
 func main() {
 	var (
-		addr    = flag.String("addr", "127.0.0.1:8080", "listen address")
-		dbPath  = flag.String("db", filepath.Join("data", "out", "par.db"), "results database")
-		queue   = flag.String("queue", filepath.Join("data", "out", "puzzles.json"), "approved puzzle queue")
-		secret  = flag.String("secret", "", "master secret; defaults to $PAR_SECRET")
-		devSlow = flag.Bool("dev", false, "serve assets from disk instead of the binary")
+		addr     = flag.String("addr", "127.0.0.1:8080", "listen address")
+		dbPath   = flag.String("db", filepath.Join("data", "out", "par.db"), "results database")
+		queue    = flag.String("queue", filepath.Join("data", "out", "puzzles.json"), "approved puzzle queue")
+		secret   = flag.String("secret", "", "master secret; defaults to $PAR_SECRET")
+		devSlow  = flag.Bool("dev", false, "serve assets from disk instead of the binary")
+		poolPath = flag.String("pool", filepath.Join("data", "out", "pool.json"), "validated practice situations")
 	)
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	if err := run(log, *addr, *dbPath, *queue, *secret, *devSlow); err != nil {
+	if err := run(log, *addr, *dbPath, *queue, *poolPath, *secret, *devSlow); err != nil {
 		log.Error("server failed", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(log *slog.Logger, addr, dbPath, queuePath, secretFlag string, dev bool) error {
+func run(log *slog.Logger, addr, dbPath, queuePath, poolPath, secretFlag string, dev bool) error {
 	secret := secretFlag
 	if secret == "" {
 		secret = os.Getenv("PAR_SECRET")
@@ -86,6 +87,15 @@ func run(log *slog.Logger, addr, dbPath, queuePath, secretFlag string, dev bool)
 			"path", queuePath, "run", "make puzzles")
 	}
 
+	var pool *puzzle.Pool
+	if loaded, err := puzzle.LoadPool(poolPath); err == nil {
+		pool = loaded
+		log.Info("practice pool loaded", "path", poolPath, "situations", pool.Len())
+	} else {
+		log.Warn("no practice pool; practice mode will be unavailable",
+			"path", poolPath, "run", "parpuzzle -pool 20")
+	}
+
 	assets, err := webAssets(dev)
 	if err != nil {
 		return err
@@ -96,6 +106,7 @@ func run(log *slog.Logger, addr, dbPath, queuePath, secretFlag string, dev bool)
 		Sessions: sessions,
 		DB:       db,
 		Queue:    q,
+		Pool:     pool,
 		Secret:   []byte(secret),
 		Log:      log,
 		Now:      time.Now,

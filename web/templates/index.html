@@ -21,8 +21,72 @@
 
 <main id="app">
 
+  <!-- Menu -->
+  <section class="card" id="screen-menu" hidden>
+    <ol class="howto">
+      <li><b>A score is set.</b> Today it is <span id="menu-target">—</span>.</li>
+      <li><b>You bowl first.</b> Five bowlers, four overs each. Every over you
+          choose who bowls. Stop them getting there.</li>
+      <li><b>Then you bat.</b> Same score, other side. Six attacking overs to
+          spend across twenty. Get there yourself.</li>
+    </ol>
+    <p class="prose subtle">
+      Takes about three minutes. The catch is that your best bowler only has
+      four overs, so using him early means someone worse bowls at the end.
+    </p>
+
+    <div class="modes">
+      <button class="mode" data-mode="daily">
+        <span class="mode-name">Today&rsquo;s puzzle</span>
+        <span class="mode-sub">The same one everybody gets. Counts towards the day&rsquo;s scores.</span>
+      </button>
+      <button class="mode" data-mode="practice">
+        <span class="mode-name">Practice</span>
+        <span class="mode-sub">A fresh situation each time. Play as many as you like.</span>
+      </button>
+      <button class="mode" data-mode="draft">
+        <span class="mode-name">Pick your XI</span>
+        <span class="mode-sub">Choose your own bowlers and batters, on a budget.</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Draft -->
+  <section class="card" id="screen-draft" hidden>
+    <h2 class="rule-heading">Pick your side</h2>
+    <p class="prose subtle">
+      Every player has a price. The budget will not stretch to five good
+      bowlers, so something has to give.
+    </p>
+
+    <div class="budget-bar">
+      <div>
+        <span class="label">Bowlers</span>
+        <span class="figure" id="draft-bowl-count">0/5</span>
+        <span class="budget" id="draft-bowl-cost">0 / 55</span>
+      </div>
+      <div>
+        <span class="label">Batters</span>
+        <span class="figure" id="draft-bat-count">0/6</span>
+        <span class="budget" id="draft-bat-cost">0 / 66</span>
+      </div>
+    </div>
+
+    <h3 class="sub-heading">Bowlers <span class="hint">pick 5</span></h3>
+    <div class="picks" id="draft-bowlers"></div>
+
+    <h3 class="sub-heading">Batters <span class="hint">pick 6</span></h3>
+    <div class="picks" id="draft-batters"></div>
+
+    <p class="draft-note" id="draft-note"></p>
+    <button class="primary" id="btn-draft-start" disabled>Start</button>
+    <button class="ghost" id="btn-draft-back">Back</button>
+  </section>
+
   <!-- Start -->
   <section class="card" id="screen-start" hidden>
+    <p class="mode-tag" id="start-mode">—</p>
+
     <div class="fixture">
       <div class="fixture-target">
         <span class="label">TARGET</span>
@@ -35,23 +99,25 @@
     </div>
 
     <p class="prose">
-      You play both innings of the same target. First you defend it: five
-      bowlers, four overs each, and one decision every over. Then you chase it
-      with six attacking overs to spend.
+      You are <b>bowling first</b>. They need <span id="start-need">—</span> to
+      win. Choose a bowler for every over.
     </p>
 
     <h2 class="rule-heading">Your attack</h2>
     <ul class="attack-list" id="start-attack"></ul>
 
     <p class="unvalidated" id="start-unvalidated" hidden>
-      Today&rsquo;s puzzle has not been balance-checked, so it may be lopsided.
+      This one has not been balance-checked, so it may be lopsided.
     </p>
 
-    <button class="primary" id="btn-start">Start defending</button>
+    <button class="primary" id="btn-start">Start bowling</button>
+    <button class="ghost" id="btn-start-back">Back</button>
   </section>
 
   <!-- Play -->
   <section id="screen-play" hidden>
+
+    <p class="phase-banner" id="phase-banner">YOU ARE BOWLING · stop them reaching the target</p>
 
     <div class="scoreboard">
       <div class="sb-main">
@@ -68,8 +134,15 @@
     </div>
 
     <div class="strip-wrap">
-      <div class="strip" id="strip-defend" aria-label="Defend innings, over by over"></div>
-      <div class="strip" id="strip-chase" aria-label="Chase innings, over by over" hidden></div>
+      <div class="strip-row">
+        <span class="strip-label">BOWL</span>
+        <div class="strip" id="strip-defend" aria-label="Bowling innings, over by over"></div>
+      </div>
+      <div class="strip-row" id="strip-chase-row" hidden>
+        <span class="strip-label">BAT</span>
+        <div class="strip" id="strip-chase" aria-label="Batting innings, over by over"></div>
+      </div>
+      <p class="strip-key">green = the over helped you · red = it hurt</p>
     </div>
 
     <div class="over-head">
@@ -79,22 +152,20 @@
 
     <div class="balls" id="balls" aria-live="polite"></div>
 
-    <!-- Defend controls -->
     <div id="controls-defend">
-      <h2 class="rule-heading">Who bowls?</h2>
+      <h2 class="rule-heading">Who bowls this over?</h2>
       <div class="bowlers" id="bowlers"></div>
     </div>
 
-    <!-- Chase controls -->
     <div id="controls-chase" hidden>
       <h2 class="rule-heading">
-        How do you play it?
+        How do you play this over?
         <span class="tokens" id="tokens" aria-label="attacking overs left"></span>
       </h2>
       <div class="intents">
-        <button class="intent" data-intent="block"><span class="intent-name">Block</span><span class="intent-sub">protect wickets</span></button>
-        <button class="intent" data-intent="rotate"><span class="intent-name">Rotate</span><span class="intent-sub">keep it ticking</span></button>
-        <button class="intent" data-intent="attack" id="intent-attack"><span class="intent-name">Attack</span><span class="intent-sub">spend a token</span></button>
+        <button class="intent" data-intent="block"><span class="intent-name">Block</span><span class="intent-sub">safe, few runs</span></button>
+        <button class="intent" data-intent="rotate"><span class="intent-name">Rotate</span><span class="intent-sub">steady, the default</span></button>
+        <button class="intent" data-intent="attack" id="intent-attack"><span class="intent-name">Attack</span><span class="intent-sub">more runs, more risk</span></button>
       </div>
     </div>
 
@@ -113,11 +184,18 @@
       <div><span class="label">STREAK</span><span class="figure" id="result-streak">—</span></div>
     </div>
 
+    <p class="prose subtle" id="score-explain">
+      The decision score rates your choices, not your luck: it compares what you
+      picked against what else was available, before the ball was bowled.
+    </p>
+
     <p class="prose" id="result-day"></p>
 
     <div class="result-actions">
       <button class="primary" id="btn-copy">Copy result</button>
-      <button class="ghost" id="btn-again">Play again</button>
+      <button class="ghost" id="btn-new">Play a different situation</button>
+      <button class="ghost" id="btn-same">Play this one again</button>
+      <button class="ghost" id="btn-menu">Back to the menu</button>
     </div>
   </section>
 

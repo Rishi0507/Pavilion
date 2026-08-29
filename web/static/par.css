@@ -474,3 +474,180 @@ button:focus-visible, a:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Menu and onboarding ------------------------------------------------------
+ *
+ * The first screen has one job: make someone who has never seen this
+ * understand it before they decide whether to care. Three numbered steps, then
+ * the one sentence that says where the difficulty is. Everything else waits.
+ */
+
+.howto {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.howto li {
+  position: relative;
+  padding: 12px 0 12px 38px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--face-txt);
+  font-size: 16px;
+  line-height: 1.5;
+  color: #C9C4B8;
+  counter-increment: step;
+}
+
+.howto li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  font-family: var(--face-num);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+}
+
+.howto b { color: var(--ink); font-weight: 600; }
+
+.subtle { color: var(--dim); font-size: 15px; }
+
+.modes { display: grid; gap: 10px; margin-top: 24px; }
+
+.mode {
+  min-height: var(--tap);
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  gap: 3px;
+}
+
+.mode:hover { border-color: var(--dim); background: var(--panel2); }
+.mode:first-child { border-color: var(--ink); }
+
+.mode-name { font-size: 16px; font-weight: 600; }
+.mode-sub  { font-size: 13px; color: var(--faint); font-family: var(--face-txt); }
+
+.mode-tag {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--level);
+}
+
+/* Draft ------------------------------------------------------------------- */
+
+.budget-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  margin: 16px 0 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--board);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.budget-bar > div {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.budget { display: block; font-size: 12px; color: var(--dim); margin-top: 2px; }
+.budget.over { color: var(--loss); font-weight: 600; }
+
+.sub-heading {
+  margin: 22px 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.hint { font-size: 11px; color: var(--faint); letter-spacing: 0.06em; }
+
+.picks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.pick {
+  min-height: 62px;
+  padding: 9px 10px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+
+.pick:hover:not(:disabled) { border-color: var(--dim); }
+.pick.on { border-color: var(--ink); background: var(--panel2); }
+.pick:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.pick-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.pick-style { font-size: 10px; color: var(--faint); }
+
+.pick-cost {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--level);
+}
+
+.pick.on .pick-cost { color: var(--ink); }
+
+.draft-note { margin-top: 16px; font-size: 13px; color: var(--dim); min-height: 20px; }
+
+/* Play screen clarity ------------------------------------------------------ */
+
+.phase-banner {
+  margin: 18px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--ink);
+  background: var(--panel);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.phase-banner b { color: var(--ink); }
+.phase-banner.batting { border-left-color: var(--level); }
+
+.strip-row { display: flex; align-items: center; gap: 8px; }
+.strip-row + .strip-row { margin-top: 4px; }
+.strip-row .strip { flex: 1; }
+
+.strip-label {
+  width: 30px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+
+.strip-key {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--faint);
+  font-family: var(--face-txt);
+}
+
+@media (max-width: 380px) {
+  .picks { grid-template-columns: 1fr; }
+  .budget-bar { grid-template-columns: 1fr; }
+}
