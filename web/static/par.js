@@ -382,7 +382,9 @@ function renderPicks(containerID, pool, picked, limit, budget) {
     cost.textContent = `${p.cost} cr`;
 
     btn.append(markTile(p), name, style, cost);
-    btn.title = p.note || '';
+    // The card has room for an abbreviation only, so the hover carries the
+    // reason for the price, which is the thing a picker actually wants.
+    btn.title = [p.name, p.years, p.note].filter(Boolean).join(' · ');
     btn.onclick = () => togglePick(p, picked, pool, limit, budget, containerID);
     wrap.append(btn);
   }

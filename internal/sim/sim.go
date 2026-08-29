@@ -249,10 +249,20 @@ type State struct {
 	// AttacksUsed counts high-intent overs spent.
 	AttacksUsed uint8
 
-	// LimitAttacks enforces the budget. It applies only when the player is
-	// batting: the budget is the chase half's puzzle, not a law of cricket, and
-	// the AI side in the defend half bats to whatever intent the situation
-	// calls for.
+	// LimitAttacks enforces the budget, in both halves.
+	//
+	// It used to apply only when the player was batting, on the reasoning that
+	// the budget is the chase half's puzzle rather than a law of cricket. That
+	// was a mistake, and rebalancing attacking exposed it: the AI side could
+	// attack in all twenty overs while the player had six tokens, so the two
+	// halves were not the same problem and their win rates were not comparable
+	// numbers. Defending against an opponent with unlimited aggression fell to
+	// a quarter of games while chasing sat above a half, and the puzzle
+	// generator, which requires both halves to be a contest, could not find a
+	// target that satisfied it at any score.
+	//
+	// The game's own description is "same score, other side". This makes that
+	// true.
 	LimitAttacks bool
 
 	Done bool
@@ -264,18 +274,16 @@ func (s *State) AttacksLeft() int { return MaxAttacks - int(s.AttacksUsed) }
 // ErrNoAttacksLeft is returned when the attack budget is exhausted.
 var ErrNoAttacksLeft = errors.New("sim: no high-intent overs left")
 
-// NewPlayerChase starts the chase half, where the player bats under the
-// attacking-over budget.
-func NewPlayerChase(p *Puzzle) *State {
-	s := NewChase(p)
-	s.LimitAttacks = true
-	return s
-}
+// NewPlayerChase starts the chase half, where the player bats.
+//
+// It is the same innings as the defend half, from the other chair.
+func NewPlayerChase(p *Puzzle) *State { return NewChase(p) }
 
-// NewChase starts an innings chasing the target, with no budget on intent.
-// This is the defend half, where the AI bats.
+// NewChase starts an innings chasing the target under the attacking-over
+// budget, whoever is batting.
 func NewChase(p *Puzzle) *State {
 	return &State{
+		LimitAttacks: true,
 		Puzzle:      p,
 		Striker:     0,
 		NonStriker:  1,

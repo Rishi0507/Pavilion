@@ -169,8 +169,8 @@ button:focus-visible, a:focus-visible {
 
 /* The ground.
  *
- * A canvas showing the venue, with the fixture set over it the way a broadcast
- * sets its titles over the establishing shot. The type sits on a gradient
+ * A rendered picture of the venue, with the fixture set over it the way a
+ * broadcast sets its titles over the establishing shot. The type sits on a gradient
  * rather than directly on the render, because a rotating camera will eventually
  * put something pale behind every word otherwise. */
 .ground {

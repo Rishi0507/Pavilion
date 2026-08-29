@@ -613,22 +613,51 @@ func TestDeriveDailyKey(t *testing.T) {
 	}
 }
 
-// TestAttackBudget covers the constraint that makes the chase a puzzle: high
-// intent is limited, so spending it early costs the option later.
-// TestBudgetOnlyBindsThePlayer checks that the AI batting side in the defend
-// half is not silently subject to the chase half's puzzle constraint.
-func TestBudgetOnlyBindsThePlayer(t *testing.T) {
+// TestBudgetBindsBothSides checks that the defending half and the chasing half
+// are the same innings from opposite chairs.
+//
+// The budget used to bind the player only, so the AI side could attack in all
+// twenty overs while the player had six tokens. That made the two halves
+// different problems and their win rates incomparable: defending fell to a
+// quarter of games while chasing sat above a half, and the generator could not
+// find a target at which both halves were a contest, because no such target
+// existed. The game says "same score, other side", and this is what makes that
+// sentence true.
+func TestBudgetBindsBothSides(t *testing.T) {
 	key := testKey(t)
 	p := fixedPredictor{p: []float64{corpus.Dot: 1}}
-	s := NewChase(testPuzzle())
-	for range MaxAttacks + 3 {
-		if s.Done {
-			break
-		}
-		legal := s.LegalBowlers()
-		if _, err := PlayOver(s, key, legal[0], Attack, p); err != nil {
-			t.Fatalf("over %d: the AI side should not be budgeted: %v", s.Over, err)
-		}
+
+	for _, tc := range []struct {
+		name  string
+		state *State
+	}{
+		{"the defend half", NewChase(testPuzzle())},
+		{"the chase half", NewPlayerChase(testPuzzle())},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := tc.state
+			spent := 0
+			for !s.Done && spent < MaxAttacks {
+				legal := s.LegalBowlers()
+				if len(legal) == 0 {
+					t.Fatal("no legal bowler")
+				}
+				if _, err := PlayOver(s, key, legal[0], Attack, p); err != nil {
+					t.Fatalf("over %d, attack %d of %d: %v", s.Over, spent+1, MaxAttacks, err)
+				}
+				spent++
+			}
+			if s.AttacksLeft() != 0 {
+				t.Fatalf("AttacksLeft = %d after spending the budget", s.AttacksLeft())
+			}
+			legal := s.LegalBowlers()
+			if len(legal) == 0 {
+				return
+			}
+			if _, err := PlayOver(s, key, legal[0], Attack, p); !errors.Is(err, ErrNoAttacksLeft) {
+				t.Fatalf("a seventh attacking over was allowed: %v", err)
+			}
+		})
 	}
 }
 

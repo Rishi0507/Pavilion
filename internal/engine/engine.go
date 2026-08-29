@@ -246,6 +246,12 @@ func (e *Engine) ChooseIntent(s *sim.State) (sim.Intent, error) {
 	}
 
 	for _, intent := range []sim.Intent{sim.Block, sim.Rotate, sim.Attack} {
+		// The budget binds whoever is batting, so an intent that cannot be
+		// played is not an option to be compared. Without this the AI side
+		// would keep choosing an over the rules would then refuse.
+		if intent == sim.Attack && s.LimitAttacks && s.AttacksLeft() <= 0 {
+			continue
+		}
 		sim.TiltFor(base, intent, s.RequiredRate(), tilted)
 
 		expRuns, pWicket := 0.0, tilted[corpus.Wicket]
