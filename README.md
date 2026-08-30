@@ -1,18 +1,32 @@
 # Pavilion
 
-A daily T20 cricket puzzle. One target score per day, identical for every player
-in the world. You play both innings of that target: first you defend it with
-five bowlers and a four over limit each, then you chase it with a budget of six
-attacking overs.
+A deterministic T20 match engine and daily decision problem, built over roughly
+260,000 ball by ball IPL deliveries.
 
-The puzzle counts as solved only when both halves are won.
+One target per day, identical for every player in the world. You play both
+innings of it: first you defend the score under a five bowler, four over
+allocation constraint, then you chase the same score under a budget of six
+attacking overs. An instance counts as solved only when both halves are won.
 
-Pavilion is scored on decisions rather than outcomes. Every choice is compared
-against the alternatives that were available at the moment it was made, before
-the ball was bowled, so a well played defeat can outscore a lucky win.
+Play is evaluated on decision quality rather than realised outcome. Every choice
+is scored against the alternatives available in that state, before the delivery
+is resolved, so a well played defeat can outrank a fortunate win.
 
-**Status:** feature complete and running locally. Start it with `make serve` and
-open <http://127.0.0.1:8080>.
+**Status:** all features implemented, running locally, no deployment. Two things
+are outstanding before it could face the public:
+
+- Seven validated days are queued, covering 2026-08-30 to 2026-09-05. Past that
+  the server falls back to generating an unvalidated instance and flags it in
+  the interface. Regenerating the queue is a manual step with no scheduler
+  behind it.
+- `PAVILION_SECRET` is still a development default. See
+  [Configuration](#configuration).
+
+Neither blocks local play.
+
+```sh
+go run ./cmd/pavsrv     # then open http://127.0.0.1:8080
+```
 
 ---
 
@@ -33,8 +47,13 @@ open <http://127.0.0.1:8080>.
 ## Quick start
 
 Pavilion needs a corpus, a fitted rate table and two trained models before it
-can serve a puzzle. The pipeline is reproducible from public data and each step
-is a Make target.
+can serve an instance. The pipeline is reproducible from public data, and each
+step is a Make target.
+
+GNU Make is a convenience rather than a requirement: every target is a one line
+`go run`, and the Makefile shows the exact command. Note that on Windows the
+binary is frequently installed as `mingw32-make` rather than `make`, in which
+case substitute it below.
 
 ```sh
 make data      # download the Cricsheet IPL archive and the people register
@@ -45,7 +64,7 @@ make graph     # build the batter versus bowler matchup graph
 make features  # export the training matrix
 make model     # train and calibrate the models (requires uv)
 make check     # fail if data quality has regressed
-make puzzles   # generate and validate the daily puzzle queue
+make puzzles   # search for and validate the daily queue
 make serve     # run the game on http://127.0.0.1:8080
 ```
 
@@ -89,21 +108,31 @@ else.
 Overnight, a generator simulates thousands of full games at candidate targets
 and keeps only situations where a competent player wins between 35 and 65
 percent of the time **and** where the bowling choice measurably changes the
-result. A target you would win nine times in ten is not a puzzle. The search
+result. A target you would win nine times in ten is not a contest. The search
 covers the whole tuple of target, attack, chasing side and venue, because the
 attack you are dealt is part of the problem rather than set dressing.
 
-### Randomness is pre committed
+### Entropy is pre committed
 
-The dice are not rolled when you click. Every ball of the day has a fixed
-coordinate of day, innings, over and delivery, and its random number is derived
-from the day's key plus that coordinate. Ball four of over twelve carries the
-same number whether you reach it or not, so replaying cannot fish for a better
-outcome and every player genuinely meets the same deliveries.
+Nothing is rolled when you click. Every delivery has a fixed coordinate of day,
+innings, over, ball and the decision taken for that over, and its random number
+is derived from the day's key and that coordinate. There is no generator whose
+position depends on how many balls have been bowled.
 
-Your choices move the probabilities, not the dice. A better bowler shifts the
-outcome distribution; the same random number is then read against the shifted
-distribution.
+Two consequences follow, and both are enforced by tests. Two players who make
+the same decisions meet exactly the same deliveries, byte for byte. And the luck
+in the seventeenth over cannot depend on anything done in the fifth, so
+"unlucky" and "wrong" stay distinguishable and a score reflects choices rather
+than an accumulated dice history.
+
+Including the decision in the coordinate is a correction to an earlier design
+that drew from the coordinate alone and let the choice move only the
+distribution. That reads well on paper and played badly: a wicket occupies three
+to eight percent of the distribution, swapping bowlers moves that boundary by a
+point or two, and a draw inside the wicket bucket therefore stayed a wicket
+almost regardless of the choice. Measured across four very different bowling
+policies, the first nine overs produced an identical pattern of wickets. See
+[technical-architecture.md](docs/technical-architecture.md#7-determinism).
 
 ### Scoring rates decisions
 
@@ -142,8 +171,8 @@ flowchart LR
 
 Three properties are load bearing and are enforced by tests:
 
-1. **Randomness is pre committed from ball coordinates**, never drawn from a
-   sequential stream.
+1. **Entropy is pre committed from a coordinate**, of ball and decision, never
+   drawn from a sequential stream.
 2. **The server is authoritative.** The browser sends a choice and renders a
    result. It never simulates a delivery and never receives the day's key.
 3. **The daily target is chosen by Monte Carlo**, offline, never at request
@@ -160,7 +189,7 @@ cmd/            Command line entry points
   pavrates      Hierarchical shrunk rate fitting
   pavfeat       Training matrix export
   pavquery      Corpus queries
-  pavpuzzle     Daily puzzle generation and validation
+  pavpuzzle     Daily instance generation and validation
   pavplay       Terminal client
   pavsrv        The game server
 internal/
@@ -171,7 +200,7 @@ internal/
   features      Feature extraction with an expanding window
   model         Pure Go inference for the trained models
   sim           Deterministic delivery simulator
-  engine        Prediction, intent, puzzle construction, ratings
+  engine        Prediction, intent, instance construction, ratings
   puzzle        Monte Carlo validation and the daily queue
   session       Signed run tokens and anti replay
   store         Results database
@@ -256,7 +285,8 @@ make dev      # serve with assets read from disk, so a refresh picks up edits
 
 The test suite covers the properties that are easy to break silently:
 
-- randomness is derived from coordinates and does not depend on play order
+- entropy is derived from coordinates, and earlier decisions never move later luck
+- a different choice genuinely produces a different delivery
 - the attacking budget binds both sides equally
 - a full length innings never serialises a null where an array is expected
 - the bowler scheduler can always complete twenty overs
