@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
 )
 
 // fixedPredictor returns the same distribution for every situation, so tests
@@ -172,53 +172,79 @@ func TestLuckIsFixedByCoordinate(t *testing.T) {
 	}
 }
 
-// TestDecisionOrderDoesNotChangeLuck plays the same set of overs in different
-// orders and checks that each over's draws depend on the over number alone.
-func TestDecisionOrderDoesNotChangeLuck(t *testing.T) {
+// The luck in a given over must not depend on anything done in an earlier one.
+//
+// This is the property the coordinate scheme exists for, and it is what keeps
+// "unlucky" and "wrong" distinguishable: a player cannot be punished in the
+// seventeenth over for a choice made in the fifth, so a score reflects the
+// choices rather than an accumulated dice history.
+//
+// It is deliberately weaker than the property this used to assert, which was
+// that an over's luck did not depend on that over's own decision either. That
+// version played badly. A wicket occupies a few percent of the distribution and
+// swapping bowlers moves the boundary by a point or two, so a draw that landed
+// in the wicket bucket stayed a wicket almost regardless of the choice, and the
+// first nine overs came out identical under four very different bowling
+// policies. Players read that as scripted, and were right to.
+func TestEarlierDecisionsDoNotChangeLaterLuck(t *testing.T) {
 	key := testKey(t)
-
-	// A fixed distribution means the outcome depends only on the draw, so any
-	// difference between orderings would be the draw moving.
 	p := fixedPredictor{p: []float64{0.3, 0.35, 0.06, 0.004, 0.12, 0.06, 0.05, 0.05, 0.006}}
 
-	a, _ := playAll(t, key, []int{0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, p)
-	b, _ := playAll(t, key, []int{4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0}, p)
+	// Two orders differing only in the first ten overs. From over eleven both
+	// bowl an identical sequence, so from there the two matches must agree.
+	head := []int{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	alt := []int{4, 3, 2, 1, 0, 4, 3, 2, 1, 0}
+	// Starts with bowler 2, so it follows either opening without asking anyone
+	// to bowl consecutive overs. Each bowler ends on exactly four.
+	tail := []int{2, 3, 4, 0, 1, 2, 3, 4, 0, 1}
 
-	if len(a) != len(b) {
-		t.Fatalf("different over counts: %d and %d", len(a), len(b))
-	}
-	for i := range a {
-		if len(a[i].Deliveries) != len(b[i].Deliveries) {
-			t.Fatalf("over %d: %d deliveries one way, %d the other", i, len(a[i].Deliveries), len(b[i].Deliveries))
+	a, _ := playAll(t, key, append(append([]int{}, head...), tail...), p)
+	b, _ := playAll(t, key, append(append([]int{}, alt...), tail...), p)
+
+	checked := 0
+	for i := 10; i < min(len(a), len(b)); i++ {
+		if a[i].Bowler.ID != b[i].Bowler.ID {
+			t.Fatalf("over %d: the two runs did not converge on the same bowler", i)
 		}
-		for j := range a[i].Deliveries {
-			if a[i].Deliveries[j].Outcome != b[i].Deliveries[j].Outcome {
-				t.Errorf("over %d ball %d: %v under one bowling order, %v under another",
-					i, j, a[i].Deliveries[j].Outcome, b[i].Deliveries[j].Outcome)
+		for j := range min(len(a[i].Deliveries), len(b[i].Deliveries)) {
+			checked++
+			if got, want := b[i].Deliveries[j].Outcome, a[i].Deliveries[j].Outcome; got != want {
+				t.Errorf("over %d ball %d: %v after one opening, %v after another; "+
+					"luck leaked from an earlier decision", i, j, got, want)
 			}
 		}
+	}
+	if checked == 0 {
+		t.Fatal("the two runs shared no overs, so nothing was compared")
 	}
 }
 
-// TestShuffledDecisionOrders is the property test the quality bar calls for:
-// across many random legal bowling orders, every over's luck stays put.
-func TestShuffledDecisionOrders(t *testing.T) {
+// A different choice has to produce a genuinely different ball.
+//
+// Without this the game is scripted: the same wickets fall at the same moments
+// whatever the player does, and the decision the entire game is about has no
+// visible consequence.
+func TestADifferentChoiceChangesTheBall(t *testing.T) {
 	key := testKey(t)
-	p := fixedPredictor{p: []float64{0.3, 0.35, 0.06, 0.004, 0.12, 0.06, 0.05, 0.05, 0.006}}
-	r := rand.New(rand.NewPCG(11, 22))
 
-	reference, _ := playAll(t, key, legalOrder(), p)
-
-	for trial := range 200 {
-		order := shuffledLegalOrder(r)
-		got, _ := playAll(t, key, order, p)
-		for i := range min(len(got), len(reference)) {
-			for j := range min(len(got[i].Deliveries), len(reference[i].Deliveries)) {
-				if got[i].Deliveries[j].Outcome != reference[i].Deliveries[j].Outcome {
-					t.Fatalf("trial %d order %v: over %d ball %d differs", trial, order, i, j)
-				}
+	same := 0
+	for over := range uint8(20) {
+		base := Draw(key, Coord{Innings: 2, Over: over, Delivery: 0, Choice: EncodeChoice(0, Rotate)})
+		for bowler := 1; bowler < 5; bowler++ {
+			other := Draw(key, Coord{Innings: 2, Over: over, Delivery: 0, Choice: EncodeChoice(bowler, Rotate)})
+			if other == base {
+				same++
 			}
 		}
+	}
+	if same != 0 {
+		t.Errorf("%d of 80 bowler swaps left the draw unchanged", same)
+	}
+
+	// Intent has to matter too, or the batting half is scripted the same way.
+	if a, b := Draw(key, Coord{Innings: 2, Over: 3, Delivery: 2, Choice: EncodeChoice(1, Block)}),
+		Draw(key, Coord{Innings: 2, Over: 3, Delivery: 2, Choice: EncodeChoice(1, Attack)}); a == b {
+		t.Error("blocking and attacking an over drew the same number")
 	}
 }
 
@@ -613,22 +639,51 @@ func TestDeriveDailyKey(t *testing.T) {
 	}
 }
 
-// TestAttackBudget covers the constraint that makes the chase a puzzle: high
-// intent is limited, so spending it early costs the option later.
-// TestBudgetOnlyBindsThePlayer checks that the AI batting side in the defend
-// half is not silently subject to the chase half's puzzle constraint.
-func TestBudgetOnlyBindsThePlayer(t *testing.T) {
+// TestBudgetBindsBothSides checks that the defending half and the chasing half
+// are the same innings from opposite chairs.
+//
+// The budget used to bind the player only, so the AI side could attack in all
+// twenty overs while the player had six tokens. That made the two halves
+// different problems and their win rates incomparable: defending fell to a
+// quarter of games while chasing sat above a half, and the generator could not
+// find a target at which both halves were a contest, because no such target
+// existed. The game says "same score, other side", and this is what makes that
+// sentence true.
+func TestBudgetBindsBothSides(t *testing.T) {
 	key := testKey(t)
 	p := fixedPredictor{p: []float64{corpus.Dot: 1}}
-	s := NewChase(testPuzzle())
-	for range MaxAttacks + 3 {
-		if s.Done {
-			break
-		}
-		legal := s.LegalBowlers()
-		if _, err := PlayOver(s, key, legal[0], Attack, p); err != nil {
-			t.Fatalf("over %d: the AI side should not be budgeted: %v", s.Over, err)
-		}
+
+	for _, tc := range []struct {
+		name  string
+		state *State
+	}{
+		{"the defend half", NewChase(testPuzzle())},
+		{"the chase half", NewPlayerChase(testPuzzle())},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := tc.state
+			spent := 0
+			for !s.Done && spent < MaxAttacks {
+				legal := s.LegalBowlers()
+				if len(legal) == 0 {
+					t.Fatal("no legal bowler")
+				}
+				if _, err := PlayOver(s, key, legal[0], Attack, p); err != nil {
+					t.Fatalf("over %d, attack %d of %d: %v", s.Over, spent+1, MaxAttacks, err)
+				}
+				spent++
+			}
+			if s.AttacksLeft() != 0 {
+				t.Fatalf("AttacksLeft = %d after spending the budget", s.AttacksLeft())
+			}
+			legal := s.LegalBowlers()
+			if len(legal) == 0 {
+				return
+			}
+			if _, err := PlayOver(s, key, legal[0], Attack, p); !errors.Is(err, ErrNoAttacksLeft) {
+				t.Fatalf("a seventh attacking over was allowed: %v", err)
+			}
+		})
 	}
 }
 
@@ -677,4 +732,138 @@ func TestBlockingDoesNotSpendTheBudget(t *testing.T) {
 	if s.AttacksLeft() != MaxAttacks {
 		t.Errorf("AttacksLeft = %d after four non-attacking overs, want %d", s.AttacksLeft(), MaxAttacks)
 	}
+}
+
+// TestAttackingRiskDependsOnNeed pins the rule that makes the timing of the
+// attacking overs matter.
+//
+// With a fixed tilt, spending the budget early and spending it late chased at
+// the same rate, because attacking shifted the distribution identically
+// wherever it was applied. Swinging while the rate is under control has to cost
+// more than swinging when the chase demands it, or there is no decision in when
+// to spend.
+func TestAttackingRiskDependsOnNeed(t *testing.T) {
+	base := []float64{0.30, 0.34, 0.06, 0.004, 0.12, 0.06, 0.05, 0.06, 0.006}
+	total := 0.0
+	for _, v := range base {
+		total += v
+	}
+	for i := range base {
+		base[i] /= total
+	}
+	dst := make([]float64, corpus.NumOutcomes)
+
+	sums := func(v []float64) float64 {
+		t := 0.0
+		for _, x := range v {
+			t += x
+		}
+		return t
+	}
+
+	t.Run("attacking with the rate under control is dangerous", func(t *testing.T) {
+		ApplyIntent(base, Attack, 5.0, dst)
+		if dst[corpus.Wicket] <= base[corpus.Wicket] {
+			t.Errorf("wicket chance %.4f, not above the base %.4f",
+				dst[corpus.Wicket], base[corpus.Wicket])
+		}
+		if math.Abs(sums(dst)-1) > 1e-9 {
+			t.Errorf("distribution sums to %.12f", sums(dst))
+		}
+	})
+
+	t.Run("attacking when the chase demands it is not punished twice", func(t *testing.T) {
+		var easy, hard float64
+		ApplyIntent(base, Attack, 5.0, dst)
+		easy = dst[corpus.Wicket]
+		ApplyIntent(base, Attack, 12.0, dst)
+		hard = dst[corpus.Wicket]
+
+		if hard >= easy {
+			t.Errorf("attacking at a required rate of 12 risks %.4f, "+
+				"no less than attacking at 5 which risks %.4f", hard, easy)
+		}
+	})
+
+	t.Run("the risk fades smoothly as the rate climbs", func(t *testing.T) {
+		prev := 99.0
+		for _, req := range []float64{2, 4, 6, 8, ParRate, 10, 14} {
+			ApplyIntent(base, Attack, req, dst)
+			w := dst[corpus.Wicket]
+			if w > prev+1e-12 {
+				t.Errorf("required %.1f risks %.4f, more than at a lower rate (%.4f)", req, w, prev)
+			}
+			prev = w
+		}
+	})
+
+	t.Run("blocking and rotating are unaffected by the rate", func(t *testing.T) {
+		for _, in := range []Intent{Block, Rotate} {
+			a := make([]float64, corpus.NumOutcomes)
+			b := make([]float64, corpus.NumOutcomes)
+			ApplyIntent(base, in, 3.0, a)
+			ApplyIntent(base, in, 14.0, b)
+			for k := range a {
+				if math.Abs(a[k]-b[k]) > 1e-12 {
+					t.Errorf("%v changed with the required rate at category %d", in, k)
+				}
+			}
+		}
+	})
+
+	// The balance the mechanic depends on, pinned.
+	//
+	// Attacking used to buy about 1.2 runs an over against up to three times the
+	// chance of a wicket, which made spending a token a mistake nearly
+	// everywhere and the whole budget something to be ignored. It now has to
+	// clear a real bar when the chase needs runs, and still has to be a mistake
+	// once the chase is already won, or the timing decision disappears in the
+	// other direction.
+	t.Run("attacking pays when runs are needed and costs when they are not", func(t *testing.T) {
+		// A wicket in the middle overs is worth roughly twelve runs of chase
+		// equity. The exact figure only sets the scale of the comparison.
+		const wicketWorth = 12.0
+
+		net := func(req float64) float64 {
+			atk := make([]float64, corpus.NumOutcomes)
+			rot := make([]float64, corpus.NumOutcomes)
+			ApplyIntent(base, Attack, req, atk)
+			ApplyIntent(base, Rotate, req, rot)
+			runs := func(p []float64) float64 {
+				return p[corpus.One] + 2*p[corpus.Two] + 3*p[corpus.Three] +
+					4*p[corpus.Four] + 6*p[corpus.Six]
+			}
+			dRuns := 6 * (runs(atk) - runs(rot))
+			dWkts := 6 * (atk[corpus.Wicket] - rot[corpus.Wicket])
+			return dRuns - wicketWorth*dWkts
+		}
+
+		for _, req := range []float64{freeRate, 8.5, 10, 12, 15} {
+			if v := net(req); v < 0.6 {
+				t.Errorf("at required %.1f an attacking over is worth %+.2f runs; "+
+					"nobody would spend a token for that", req, v)
+			}
+		}
+		if v := net(3.0); v > -0.5 {
+			t.Errorf("with the chase already won an attacking over is worth %+.2f runs; "+
+				"throwing the bat at it should cost something", v)
+		}
+	})
+
+	t.Run("attacking always scores faster than rotating", func(t *testing.T) {
+		runsOf := func(p []float64) float64 {
+			return p[corpus.One] + 2*p[corpus.Two] + 3*p[corpus.Three] +
+				4*p[corpus.Four] + 6*p[corpus.Six]
+		}
+		for _, req := range []float64{3, 8, 15} {
+			atk := make([]float64, corpus.NumOutcomes)
+			rot := make([]float64, corpus.NumOutcomes)
+			ApplyIntent(base, Attack, req, atk)
+			ApplyIntent(base, Rotate, req, rot)
+			if runsOf(atk) <= runsOf(rot) {
+				t.Errorf("at required %.0f, attacking scores %.3f and rotating %.3f",
+					req, runsOf(atk), runsOf(rot))
+			}
+		}
+	})
 }

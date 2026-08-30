@@ -10,14 +10,15 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"sync"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
-	"manhattan/internal/graph"
-	"manhattan/internal/model"
-	"manhattan/internal/rates"
-	"manhattan/internal/sim"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
+	"pavilion/internal/graph"
+	"pavilion/internal/model"
+	"pavilion/internal/rates"
+	"pavilion/internal/sim"
 )
 
 // Engine holds everything loaded at boot. It is read-only once built, so it is
@@ -33,6 +34,16 @@ type Engine struct {
 	dealable []corpus.PlayerID
 	bowlers  []corpus.PlayerID
 	batters  []corpus.PlayerID
+
+	// Career labels, computed once at boot because they need a full scan of the
+	// delivery table and never change afterwards.
+	teams []string
+	years []string
+
+	recentVenues []corpus.VenueID
+
+	posOnce   sync.Once
+	positions []corpus.BattingPosition
 }
 
 // Paths locates every artifact the engine needs.
@@ -68,7 +79,7 @@ func New(p Paths) (*Engine, error) {
 		return nil, err
 	}
 	if len(attrs) == 0 {
-		return nil, fmt.Errorf("engine: no attribute table at %s; run parattr", p.Attributes)
+		return nil, fmt.Errorf("engine: no attribute table at %s; run pavattr", p.Attributes)
 	}
 	out, err := model.Load(p.Model, p.ModelMeta, features.Names)
 	if err != nil {
@@ -93,6 +104,7 @@ func New(p Paths) (*Engine, error) {
 	batKnown := func(id string) bool { _, ok := attrs.BatOf(id); return ok }
 	bowlKnown := func(id string) bool { _, ok := attrs.BowlOf(id); return ok }
 	e.dealable, e.bowlers, e.batters, _ = st.Dealable(corpus.DefaultEligibility, batKnown, bowlKnown)
+	e.labelCareers()
 	return e, nil
 }
 
@@ -104,7 +116,72 @@ func (e *Engine) player(id corpus.PlayerID) sim.Player {
 	p := e.store.Players[id]
 	hand, _ := e.attrs.BatOf(p.CricsheetID)
 	class, _ := e.attrs.BowlOf(p.CricsheetID)
-	return sim.Player{ID: id, Name: p.Name, Hand: hand, Class: class}
+	pl := sim.Player{ID: id, Name: p.Name, Hand: hand, Class: class}
+	if int(id) < len(e.teams) {
+		pl.Team, pl.Years = e.teams[id], e.years[id]
+	}
+	return pl
+}
+
+// labelCareers records, for each player, the side they are best known for and
+// the years they played.
+//
+// "Best known for" is the most recent side by preference and the longest spell
+// as a tiebreak, which is how a supporter would answer: Chris Gayle is a
+// Bangalore batter even though he finished at Punjab, because that is where the
+// innings everyone remembers were played. Where the two disagree by a wide
+// margin the longer spell wins.
+func (e *Engine) labelCareers() {
+	careers := e.store.Careers()
+	e.teams = make([]string, len(careers))
+	e.years = make([]string, len(careers))
+
+	for id, spells := range careers {
+		if len(spells) == 0 {
+			continue
+		}
+		// Fold renames together before choosing, so eight years at Kings XI and
+		// two at Punjab Kings count as ten at one club.
+		type agg struct {
+			innings int
+			last    uint16
+		}
+		byClub := map[string]*agg{}
+		first, last := spells[0].FirstSeason, spells[0].LastSeason
+		for _, sp := range spells {
+			name := CanonicalTeam(e.store.Teams[sp.Team])
+			a, ok := byClub[name]
+			if !ok {
+				a = &agg{}
+				byClub[name] = a
+			}
+			a.innings += sp.Innings
+			if sp.LastSeason > a.last {
+				a.last = sp.LastSeason
+			}
+			first = min(first, sp.FirstSeason)
+			last = max(last, sp.LastSeason)
+		}
+
+		bestName, best := "", &agg{}
+		for name, a := range byClub {
+			// A spell twice as long as the most recent one is the one people
+			// name; otherwise recency wins.
+			switch {
+			case bestName == "",
+				a.innings > 2*best.innings,
+				a.last > best.last && 2*a.innings > best.innings:
+				bestName, best = name, a
+			}
+		}
+		e.teams[id] = ShortTeam(bestName)
+
+		if first == last {
+			e.years[id] = itoa(int(first))
+		} else {
+			e.years[id] = itoa(int(first)) + "–" + itoa(int(last))
+		}
+	}
 }
 
 // Probabilities implements sim.Predictor.
@@ -175,7 +252,13 @@ func (e *Engine) ChooseIntent(s *sim.State) (sim.Intent, error) {
 	}
 
 	for _, intent := range []sim.Intent{sim.Block, sim.Rotate, sim.Attack} {
-		sim.TiltFor(base, intent, tilted)
+		// The budget binds whoever is batting, so an intent that cannot be
+		// played is not an option to be compared. Without this the AI side
+		// would keep choosing an over the rules would then refuse.
+		if intent == sim.Attack && s.LimitAttacks && s.AttacksLeft() <= 0 {
+			continue
+		}
+		sim.TiltFor(base, intent, s.RequiredRate(), tilted)
 
 		expRuns, pWicket := 0.0, tilted[corpus.Wicket]
 		for k := range corpus.NumOutcomes {
@@ -310,3 +393,109 @@ func (e *Engine) SituationFor(s *sim.State, bowler int) features.State {
 
 // Rates exposes the fitted rate table for inspection tooling.
 func (e *Engine) Rates() *rates.Table { return e.ctx.Rates() }
+
+// Name returns the grade as a stable identifier for templates and JSON.
+func (g Grade) Name() string {
+	switch g {
+	case Good:
+		return "good"
+	case Bad:
+		return "bad"
+	}
+	return "level"
+}
+
+// VenueName returns the ground's name.
+func (e *Engine) VenueName(v corpus.VenueID) string {
+	if int(v) < len(e.store.Venues) {
+		return e.store.Venues[v]
+	}
+	return "unknown ground"
+}
+
+// ClassName renders a bowling class for display.
+func ClassName(c attr.BowlClass) string { return className(c) }
+
+// HandName renders a batting hand for display.
+func HandName(h attr.Hand) string {
+	switch h {
+	case attr.LeftHandBat:
+		return "left-hand bat"
+	case attr.RightHandBat:
+		return "right-hand bat"
+	}
+	return ""
+}
+
+// CaptainPick chooses the bowler for the AI side during the chase half.
+//
+// It plays the same tactic the reference policy does: hold the two best death
+// bowlers back until the last five overs. That is what makes the player's
+// attacking budget a real decision, because the good bowlers will still be
+// there at the end.
+func (e *Engine) CaptainPick(s *sim.State) int {
+	legal := s.LegalBowlers()
+	if len(legal) == 0 {
+		return 0
+	}
+	probs := make([]float64, corpus.NumOutcomes)
+	cost := func(st *sim.State, b int) float64 {
+		if err := e.Probabilities(e.SituationFor(st, b), probs); err != nil {
+			return 0
+		}
+		total := 0.0
+		for k := range corpus.NumOutcomes {
+			switch corpus.Outcome(k) {
+			case corpus.One, corpus.Wide, corpus.NoBall:
+				total += probs[k]
+			case corpus.Two:
+				total += 2 * probs[k]
+			case corpus.Three:
+				total += 3 * probs[k]
+			case corpus.Four:
+				total += 4 * probs[k]
+			case corpus.Six:
+				total += 6 * probs[k]
+			case corpus.Wicket:
+				total -= 2 * probs[k]
+			}
+		}
+		return total
+	}
+
+	death := *s
+	death.Over = 18
+	death.LegalBalls = 108
+	order := make([]int, len(s.Puzzle.Attack))
+	for i := range order {
+		order[i] = i
+	}
+	sort.Slice(order, func(i, j int) bool { return cost(&death, order[i]) < cost(&death, order[j]) })
+
+	reserved := map[int]bool{order[0]: true}
+	if len(order) > 1 {
+		reserved[order[1]] = true
+	}
+	if s.Over < 15 {
+		best, bestCost := -1, 1e9
+		for _, b := range legal {
+			if reserved[b] {
+				continue
+			}
+			if c := cost(s, b); c < bestCost {
+				best, bestCost = b, c
+			}
+		}
+		if best >= 0 {
+			return best
+		}
+	}
+	for _, b := range order {
+		for _, l := range legal {
+			if l == b {
+				return b
+			}
+		}
+	}
+	return legal[0]
+}

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"manhattan/internal/features"
+	"pavilion/internal/features"
 )
 
 func paths(tb testing.TB) (modelPath, metaPath, parityPath string) {

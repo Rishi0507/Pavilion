@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
 )
 
 // Role is which side of the contest a rate describes.

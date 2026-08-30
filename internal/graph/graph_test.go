@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"manhattan/internal/corpus"
+	"pavilion/internal/corpus"
 )
 
 // testStore builds a small corpus by hand: two batters, two bowlers, known

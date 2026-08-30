@@ -16,15 +16,16 @@ package puzzle
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"runtime"
 	"sort"
 	"sync"
 	"time"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/engine"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/engine"
+	"pavilion/internal/sim"
 )
 
 // Criteria are the tests a candidate must pass to reach the queue.
@@ -33,6 +34,15 @@ type Criteria struct {
 	// percent; this is wider because both halves must land in the band at once
 	// and a narrow window rejects almost everything, starving the queue. A day
 	// at 62 percent is a good day; a day at 85 percent is a wasted one.
+	//
+	// This band was briefly widened to [0.30, 0.70] when a seven-day run queued
+	// nothing, on the theory that rebalancing attacking had moved the two
+	// halves apart. That theory was wrong and the widening was a plaster over a
+	// real bug: the attacking budget bound the player but not the AI, so the
+	// defending half was being played against an opponent who could attack in
+	// all twenty overs. The two halves were different games and their rates did
+	// not sum to one. With the budget applied to both, they do, and this band
+	// admits targets comfortably again, so it went back to where it was.
 	MinWinRate float64
 	MaxWinRate float64
 
@@ -323,4 +333,91 @@ func (q *Queue) For(date string) (Queued, bool) {
 		}
 	}
 	return Queued{}, false
+}
+
+// Pool is a set of validated situations that are not tied to a date.
+//
+// The daily puzzle is one problem shared by everyone, which is what makes
+// comparing results mean anything. Practice needs the opposite: a fresh
+// situation whenever someone wants one. Validating a situation costs a couple
+// of thousand simulated games, far too slow to do when a button is pressed, so
+// they are generated in advance and drawn from instantly.
+//
+// Everything in the pool has passed the same tests as a daily puzzle. A
+// practice game is not a lesser game; it simply does not count towards the
+// day's shared numbers.
+type Pool struct {
+	Generated  string   `json:"generated_at"`
+	Criteria   Criteria `json:"criteria"`
+	Situations []Queued `json:"situations"`
+}
+
+// Save writes the pool.
+func (p *Pool) Save(path string) error {
+	p.Generated = time.Now().UTC().Format(time.RFC3339)
+	b, err := json.MarshalIndent(p, "", "  ")
+	if err != nil {
+		return fmt.Errorf("puzzle: marshal pool: %w", err)
+	}
+	if err := os.WriteFile(path, append(b, '\n'), 0o644); err != nil {
+		return fmt.Errorf("puzzle: write %s: %w", path, err)
+	}
+	return nil
+}
+
+// LoadPool reads a validated pool.
+func LoadPool(path string) (*Pool, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("puzzle: read %s: %w", path, err)
+	}
+	var p Pool
+	if err := json.Unmarshal(b, &p); err != nil {
+		return nil, fmt.Errorf("puzzle: parse %s: %w", path, err)
+	}
+	return &p, nil
+}
+
+// Len reports how many situations the pool holds.
+func (p *Pool) Len() int {
+	if p == nil {
+		return 0
+	}
+	return len(p.Situations)
+}
+
+// Find returns the situation with a given identifier.
+//
+// A situation has to be addressable, not merely drawable at random. The draft
+// screen shows the ground and the target before the side is picked, and then
+// has to play that same situation: drawing again at the point of play gave the
+// player one stadium to plan against and a different one to bat at.
+func (p *Pool) Find(id string) (Queued, bool) {
+	if p == nil || id == "" {
+		return Queued{}, false
+	}
+	for _, q := range p.Situations {
+		if q.Date == id {
+			return q, true
+		}
+	}
+	return Queued{}, false
+}
+
+// Pick returns one situation, avoiding the one just played so a practice run
+// never immediately repeats itself.
+func (p *Pool) Pick(avoid string, r *rand.Rand) (Queued, bool) {
+	if p.Len() == 0 {
+		return Queued{}, false
+	}
+	if p.Len() == 1 {
+		return p.Situations[0], true
+	}
+	for range 12 {
+		q := p.Situations[r.IntN(len(p.Situations))]
+		if q.Date != avoid {
+			return q, true
+		}
+	}
+	return p.Situations[r.IntN(len(p.Situations))], true
 }

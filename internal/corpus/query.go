@@ -4,6 +4,8 @@ package corpus
 // bytes of hot columns per delivery, a full pass costs single-digit
 // milliseconds, which is why there is no index here and no query planner.
 
+import "sort"
+
 // Volume counts a player's career involvement in the corpus.
 //
 // It is the basis of the eligibility filter: the game may only deal players
@@ -176,4 +178,145 @@ func (s *Store) Dealable(e Eligibility, batKnown, bowlKnown func(cricsheetID str
 		}
 	}
 	return players, bowlers, batters, excluded
+}
+
+// Spell is one player's time at one team.
+type Spell struct {
+	Team        TeamID
+	Innings     int
+	FirstSeason uint16
+	LastSeason  uint16
+}
+
+// Careers returns, for every player, the teams they have appeared for, ordered
+// with the most recent first and ties broken by how long they were there.
+//
+// Cricsheet records the team per delivery rather than per player, because that
+// is the only place the fact exists: a player belongs to whichever side he was
+// batting or bowling for on the day. Reconstructing a career therefore means a
+// scan, which at this size is a few milliseconds and needs no index.
+//
+// Franchises that renamed themselves are left as the corpus recorded them here.
+// Folding "Kings XI Punjab" into "Punjab Kings" is a presentation decision and
+// belongs where the name is shown, not where the history is read.
+func (s *Store) Careers() [][]Spell {
+	type key struct {
+		p PlayerID
+		t TeamID
+	}
+	seen := make(map[key]*Spell)
+	lastInn := make(map[key]int32)
+
+	note := func(p PlayerID, t TeamID, inn InningsID, season uint16) {
+		if p == NoPlayer || t == NoTeam {
+			return
+		}
+		k := key{p, t}
+		sp, ok := seen[k]
+		if !ok {
+			sp = &Spell{Team: t, FirstSeason: season, LastSeason: season}
+			seen[k] = sp
+			lastInn[k] = -1
+		}
+		if lastInn[k] != int32(inn) {
+			lastInn[k] = int32(inn)
+			sp.Innings++
+		}
+		if season < sp.FirstSeason {
+			sp.FirstSeason = season
+		}
+		if season > sp.LastSeason {
+			sp.LastSeason = season
+		}
+	}
+
+	for i := range s.D.Innings {
+		inn := s.D.Innings[i]
+		if s.Inn.SuperOver[inn] {
+			continue
+		}
+		season := s.M.Season[s.Inn.Match[inn]]
+		note(s.D.Batter[i], s.Inn.BattingTeam[inn], inn, season)
+		note(s.D.NonStriker[i], s.Inn.BattingTeam[inn], inn, season)
+		note(s.D.Bowler[i], s.Inn.BowlingTeam[inn], inn, season)
+	}
+
+	out := make([][]Spell, len(s.Players))
+	for k, sp := range seen {
+		out[k.p] = append(out[k.p], *sp)
+	}
+	for _, spells := range out {
+		sort.Slice(spells, func(i, j int) bool {
+			if spells[i].LastSeason != spells[j].LastSeason {
+				return spells[i].LastSeason > spells[j].LastSeason
+			}
+			return spells[i].Innings > spells[j].Innings
+		})
+	}
+	return out
+}
+
+// BattingPosition is where a player actually bats.
+type BattingPosition struct {
+	Mean    float64 // average position across innings
+	Innings int     // how many innings that average is over
+}
+
+// BattingPositions computes each player's typical place in the order.
+//
+// Cricsheet does not record a batting position, so it is reconstructed: within
+// an innings, the order in which batters first face a ball is the order they
+// came in, which is the batting order. Averaging that across a career gives a
+// number that separates an opener from a number eight.
+//
+// This exists because the obvious proxy is wrong. Sorting a side by career balls
+// faced looks like it should approximate a top order and does not: it measures
+// how long somebody has played, not where. Ravindra Jadeja has faced more balls
+// than most openers and bats at seven, so a side ordered that way opened with
+// him and sent a specialist opener in at eight.
+func (s *Store) BattingPositions() []BattingPosition {
+	type seen struct {
+		inn   InningsID
+		order int
+	}
+
+	first := make(map[PlayerID]seen, len(s.Players))
+	sum := make([]float64, len(s.Players))
+	count := make([]int, len(s.Players))
+
+	var current InningsID = ^InningsID(0)
+	next := 0
+
+	for i := range s.D.Innings {
+		inn := s.D.Innings[i]
+		if s.Inn.SuperOver[inn] {
+			continue
+		}
+		if inn != current {
+			current, next = inn, 0
+		}
+
+		// Both ends are recorded, because the openers arrive together and only
+		// one of them faces the first ball.
+		for _, p := range [2]PlayerID{s.D.Batter[i], s.D.NonStriker[i]} {
+			if p == NoPlayer {
+				continue
+			}
+			if got, ok := first[p]; ok && got.inn == inn {
+				continue
+			}
+			next++
+			first[p] = seen{inn: inn, order: next}
+			sum[p] += float64(next)
+			count[p]++
+		}
+	}
+
+	out := make([]BattingPosition, len(s.Players))
+	for p := range out {
+		if count[p] > 0 {
+			out[p] = BattingPosition{Mean: sum[p] / float64(count[p]), Innings: count[p]}
+		}
+	}
+	return out
 }

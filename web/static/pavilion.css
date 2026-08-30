@@ -1,0 +1,1750 @@
+/* Pavilion.
+ *
+ * The reference is not the scorebook page but the mechanical scoreboard at the
+ * ground: weathered dark board, tin-plate numerals hung by hand. Same cricket
+ * vernacular, opposite value structure, and it avoids the cream-paper-and-serif
+ * look that every generated interface reaches for.
+ *
+ * The board is monochrome. The entire colour budget goes to one thing, which is
+ * whether an over helped or hurt, because that is the only information the
+ * player cannot get from the numbers alone.
+ */
+
+/* The board is warm, not blue.
+ *
+ * The first palette had a blue-green cast, which is what a screen does when
+ * nobody decides otherwise and is why so many dark interfaces look alike. A
+ * board that has stood in the sun for thirty seasons goes the other way: warm
+ * charcoal, bitumen, dust. The numerals are painted tin, so they are an off
+ * white with yellow in it rather than a grey.
+ *
+ * Depth comes from a one-pixel highlight along the top edge of a panel, the way
+ * light catches a raised metal lip. There are no shadows behind floating cards
+ * and nothing glows, because none of that is a thing a scoreboard does.
+ */
+:root {
+  --board:  #15140F;   /* weathered board, warm */
+  --panel:  #1D1B15;   /* raised section */
+  --panel2: #262319;
+  --rule:   #322E24;   /* hairline grid */
+  --lip:    rgba(255, 244, 214, 0.055); /* light on a raised edge */
+  --ink:    #F0EADB;   /* painted tin, off white */
+  --dim:    #9A9282;
+  --faint:  #6A6455;
+
+  --gain:   #6FA45C;
+  --level:  #D2A63A;
+  --loss:   #C4483B;   /* also the ball */
+
+  --tap: 44px;
+  --gap: 12px;
+  --gutter: 16px;
+  --measure: 680px;
+
+  /* A spacing scale, so the vertical rhythm is decided once rather than
+   * argued over at every element. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 14px;
+  --s4: 22px;
+  --s5: 34px;
+  --s6: 52px;
+
+  /* One curve and three durations, used everywhere. A page where each element
+   * eases differently reads as several pages stitched together; a single curve
+   * is what makes a broadcast graphic package feel like one thing. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --quick: 140ms;
+  --calm: 260ms;
+  --slow: 420ms;
+
+  --face-num: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --face-txt: "Newsreader", Georgia, "Times New Roman", serif;
+
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* An author rule that sets display beats the browser's own [hidden] rule, so
+ * anything given a display value here would stay visible when hidden. Restating
+ * it once, with weight, is less fragile than remembering the interaction at
+ * every call site. */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 var(--gutter) calc(32px + env(safe-area-inset-bottom));
+  background: var(--board);
+  color: var(--ink);
+  font-family: var(--face-num);
+  font-size: 16px;
+  line-height: 1.45;
+  /* Tabular figures everywhere by default: numbers are the content of this
+   * game, and a score that shifts width as it changes reads as sloppy. */
+  font-variant-numeric: tabular-nums lining-nums;
+  /* The page is full width and every block sets its own measure, so a hero can
+   * bleed to the edges of the screen while a paragraph still stops at a
+   * readable line length. */
+  max-width: none;
+  overflow-x: hidden;
+}
+
+.masthead,
+main#app > section,
+.colophon > p {
+  max-width: var(--measure);
+  margin-inline: auto;
+}
+
+/* The landing page carries its own wordmark, so the masthead would be the name
+ * twice on the first screen. */
+body:has(#screen-menu:not([hidden])) .masthead { display: none; }
+
+/* Masthead ---------------------------------------------------------------- */
+
+.masthead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: end;
+  gap: 0 var(--s3);
+  padding: var(--s6) 0 var(--s3);
+  border-bottom: 2px solid var(--rule);
+}
+
+.wordmark {
+  grid-row: 1 / span 2;
+  margin: 0;
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 0.86;
+  /* The wordmark is set in the tin-plate colour and the rest of the header is
+   * not, so the eye lands on the name and then reads down. */
+  color: var(--ink);
+}
+
+.tagline {
+  align-self: end;
+  margin: 0;
+  font-family: var(--face-txt);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--dim);
+}
+
+.dateline {
+  margin: var(--s1) 0 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+/* Shared ------------------------------------------------------------------ */
+
+.label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+
+.rule-heading {
+  margin: 26px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.prose {
+  font-family: var(--face-txt);
+  font-size: 17px;
+  line-height: 1.55;
+  color: #C9C4B8;
+}
+
+.card { padding-top: 22px; }
+
+button {
+  font-family: inherit;
+  font-variant-numeric: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--level);
+  outline-offset: 2px;
+}
+
+.primary {
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: var(--s5);
+  padding: 16px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--board);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.primary:disabled {
+  border-color: var(--rule);
+  background: transparent;
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.primary:active { transform: translateY(1px); }
+
+.ghost {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 14px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Start ------------------------------------------------------------------- */
+
+/* The ground.
+ *
+ * A rendered picture of the venue, with the fixture set over it the way a
+ * broadcast sets its titles over the establishing shot. The type sits on a gradient
+ * rather than directly on the render, because a rotating camera will eventually
+ * put something pale behind every word otherwise. */
+.ground {
+  position: relative;
+  margin: 18px 0 0;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  animation: ground-in var(--slow) var(--ease) both;
+}
+
+.ground-slim { aspect-ratio: 21 / 8; margin-bottom: 22px; }
+
+.ground-plate,
+.ground-target {
+  position: absolute;
+  z-index: 1;
+  padding: var(--s3) var(--s4);
+}
+
+/* The name sits over grass and stands, so it carries its own base. */
+.ground-plate {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  gap: 1px;
+  background: linear-gradient(to top,
+    rgba(20, 17, 11, 0.95) 0%,
+    rgba(20, 17, 11, 0.8) 45%,
+    rgba(20, 17, 11, 0) 100%);
+  padding-top: 58px;
+}
+
+.ground-name {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.ground-city {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.ground-dims {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: 0.03em;
+}
+
+/* Without the drawing there is nothing to caption, so the panel collapses to a
+ * plain band rather than leaving an empty rectangle on the page. */
+.ground.no-stage { aspect-ratio: auto; background: var(--panel); }
+.ground.no-stage .ground-stage { display: none; }
+.ground.no-stage .ground-plate {
+  position: static;
+  background: none;
+  padding-top: var(--s3);
+}
+.ground.no-stage .ground-target {
+  position: static;
+  text-align: left;
+  background: none;
+  padding-top: 0;
+}
+
+.ground-stage { position: absolute; inset: 0; }
+
+/* The drawing is vector, so it is sharp at any size and costs nothing to
+ * scale. It fades in the way a photograph would rather than popping. */
+.ground-stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: stage-in 520ms var(--ease) both;
+}
+
+@keyframes stage-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The target sits over a full stand, so it needs its own ground to stay
+ * legible: a packed tier is close to white, and white numerals on it disappear. */
+.ground-target {
+  right: 0;
+  top: 0;
+  text-align: right;
+  padding-left: 120px;
+  padding-bottom: 64px;
+  /* A radial fade rather than a linear one: a linear gradient in a box leaves a
+   * visible straight edge where the box ends, which over a drawing reads as a
+   * seam. */
+  background: radial-gradient(
+    120% 120% at 100% 0%,
+    rgba(20, 17, 11, 0.92) 0%,
+    rgba(20, 17, 11, 0.6) 45%,
+    rgba(20, 17, 11, 0) 78%
+  );
+}
+
+.target-figure {
+  display: block;
+  font-size: 54px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 14px rgba(20, 17, 11, 0.85);
+}
+
+.ground-note {
+  margin: 10px 0 0;
+  font-family: var(--face-txt);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--dim);
+}
+
+@keyframes ground-in {
+  from { opacity: 0; transform: scale(1.015); }
+  to   { opacity: 1; transform: none; }
+}
+
+.attack-list { margin: 0; padding: 0; list-style: none; }
+
+.attack-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 15px;
+  animation: rise var(--calm) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.unvalidated {
+  margin-top: 18px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--level);
+  background: var(--panel);
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.unvalidated code { color: var(--ink); }
+
+/* Scoreboard -------------------------------------------------------------- */
+
+/* The scoreboard.
+ *
+ * This is the one thing on the page a player looks at every over, so it is
+ * sized like the hero it is rather than like a status bar. The score is the
+ * largest object in the interface; the two figures beside it are labelled and
+ * subordinate. The top lip catches the light, which is the only depth cue used
+ * anywhere.
+ */
+.scoreboard {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--s2) var(--s4);
+  align-items: end;
+  margin-top: var(--s4);
+  padding: var(--s4) var(--s4) var(--s3);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-top-color: var(--lip);
+}
+
+.sb-main {
+  font-size: 62px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+.sb-sep  { color: var(--faint); margin: 0 2px; font-weight: 400; }
+.sb-wkts { color: var(--dim); }
+
+.sb-need { text-align: center; }
+.sb-need > span:last-child {
+  display: block;
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sb-wp { text-align: right; }
+.sb-wp-figure {
+  display: block;
+  margin-top: 2px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* The Manhattan: the signature element.
+ *
+ * A bar per over, height in runs, colour in win probability, a notch for each
+ * wicket. It is the chart every scorecard in the sport draws and the one this
+ * project is named after, and it is the only thing on the play screen that
+ * shows the shape of an innings rather than its current state.
+ *
+ * What it replaced was twenty small squares with the runs printed in them. At
+ * the width of a column that is a two-digit number in fourteen pixels, which is
+ * a smudge rather than a number, and twenty smudges in a row say nothing about
+ * where the innings went. A bar survives being small: height reads at any size,
+ * and the silhouette of twenty of them is the powerplay, the middle and the
+ * death without a single label.
+ */
+
+.charts { margin-top: var(--s4); }
+
+.manhattan { margin: 0 0 var(--s3); }
+
+.manhattan figcaption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.mh-total {
+  letter-spacing: 0.04em;
+  color: var(--dim);
+  font-weight: 600;
+}
+
+.mh-plot {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 2px;
+  height: 78px;
+  padding-top: 12px;
+  /* A baseline, because bars without one are floating rectangles. */
+  border-bottom: 1px solid var(--rule);
+}
+
+.mh-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.mh-bar {
+  position: relative;
+  width: 100%;
+  background: var(--panel2);
+  transition: height var(--calm) var(--ease), background-color var(--calm) var(--ease);
+}
+
+.mh-col.good .mh-bar  { background: var(--gain); }
+.mh-col.level .mh-bar { background: var(--level); }
+.mh-col.bad .mh-bar   { background: var(--loss); }
+
+/* The over about to be bowled: an empty column with a lit floor, which reads as
+ * "here" without competing with the overs already played. */
+.mh-col.now .mh-bar {
+  height: 3px !important;
+  background: var(--ink);
+}
+
+/* The runs, over the bar rather than in it, so the figure never has to fit
+ * inside a column that may be three pixels tall. */
+.mh-runs {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dim);
+  line-height: 1;
+}
+
+.mh-col.over-scale .mh-runs { color: var(--ink); }
+
+/* A wicket, drawn across the bar as a scorer would rule it. */
+.mh-wkt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(2px + var(--n) * 4px);
+  height: 1.5px;
+  background: var(--board);
+  opacity: 0.85;
+}
+
+.mh-key {
+  margin: 0;
+  font-size: 11px;
+  color: var(--faint);
+  font-family: var(--face-txt);
+}
+
+.k-good { color: var(--gain); font-weight: 400; }
+.k-bad  { color: var(--loss); font-weight: 400; }
+
+/* The bowling card --------------------------------------------------------
+ *
+ * Overs, runs, wickets and economy. The game asks for a bowler every over and
+ * used to show only how many overs each had left, which is the least
+ * interesting of the four numbers a captain has in front of them.
+ */
+.bowling {
+  width: 100%;
+  margin-top: var(--s4);
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.bowling caption {
+  margin-bottom: 5px;
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.bowling th,
+.bowling td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+}
+
+.bowling thead th {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  border-bottom-color: var(--dim);
+}
+
+.bowling tbody th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink);
+  /* The club tint, as the same three-pixel edge used on a pick card. */
+  border-left: 3px solid color-mix(in srgb, var(--tint, transparent) 60%, transparent);
+  padding-left: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  width: 100%;
+}
+
+.bowling td { color: var(--dim); font-variant-numeric: tabular-nums; }
+.bowling tbody tr td:nth-child(4) { color: var(--ink); font-weight: 700; }
+
+/* Over ------------------------------------------------------------------- */
+
+.over-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 22px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.over-no { font-size: 12px; letter-spacing: 0.16em; color: var(--dim); }
+.striker { font-size: 14px; color: var(--ink); }
+
+/* The ball-by-ball reveal. Cricket has a rhythm: six balls, then a break, so
+ * this is the one place anything animates. */
+
+.balls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-height: 48px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+.ball {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  font-size: 14px;
+  font-weight: 600;
+  animation: drop 200ms ease-out both;
+}
+
+.ball.boundary { border-color: var(--ink); color: var(--ink); }
+.ball.wicket   { background: var(--loss); border-color: var(--loss); color: #FBEAEA; }
+.ball.extra    { color: var(--dim); font-size: 12px; border-style: dashed; }
+
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.over-summary {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--dim);
+  letter-spacing: 0.06em;
+}
+
+/* Bowler cards ------------------------------------------------------------ */
+
+.bowlers { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+
+.bowler {
+  min-height: 68px;
+  padding: 11px 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 10px;
+  transition: border-color var(--quick) var(--ease),
+              background var(--quick) var(--ease),
+              transform var(--quick) var(--ease);
+  animation: rise var(--calm) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.bowler:disabled { opacity: 0.32; cursor: not-allowed; }
+.bowler:not(:disabled):hover {
+  border-color: var(--dim);
+  background: var(--panel2);
+  transform: translateY(-1px);
+}
+.bowler:not(:disabled):active { transform: translateY(0) scale(0.99); }
+
+.bowler .pips { grid-column: 1 / -1; }
+
+/* Overs used, shown as pips so the four-over limit is visible without reading
+ * a number. */
+.pips { display: flex; gap: 3px; margin-top: auto; }
+
+.pip { width: 9px; height: 9px; border: 1px solid var(--faint); border-radius: 50%; }
+.pip.used { background: var(--ink); border-color: var(--ink); }
+
+/* Intent ------------------------------------------------------------------ */
+
+.intents { display: grid; gap: var(--gap); }
+
+.intent {
+  min-height: var(--tap);
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.intent:not(:disabled):hover { border-color: var(--dim); background: var(--panel2); }
+.intent:disabled { opacity: 0.32; cursor: not-allowed; }
+
+.intent-name { font-size: 15px; font-weight: 600; }
+.intent-sub  { font-size: 12px; color: var(--faint); }
+
+.tokens { display: flex; gap: 4px; }
+
+.token { width: 10px; height: 10px; background: var(--loss); }
+.token.spent { background: transparent; box-shadow: inset 0 0 0 1px var(--faint); }
+
+.handover {
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  font-family: var(--face-txt);
+  font-size: 16px;
+  color: var(--ink);
+}
+
+/* Result ------------------------------------------------------------------ */
+
+/* The result --------------------------------------------------------------
+ *
+ * This is the payoff, and it used to be a sentence, a block of emoji and three
+ * small numbers. The game is two innings, so the result leads with the two
+ * innings: whether each was won, by what margin, and what the choices in it
+ * were worth. The margin in particular was never shown anywhere, and holding a
+ * target by one run is a different afternoon from holding it by forty.
+ */
+.halves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.half {
+  padding: var(--s3) var(--s3) var(--s3) calc(var(--s3) - 3px);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  background: var(--panel);
+  border-top-color: var(--lip);
+}
+
+.half.won  { border-left-color: var(--gain); }
+.half.lost { border-left-color: var(--loss); }
+
+.half-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+}
+
+.half-mark {
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.half.won .half-mark  { color: var(--gain); }
+.half.lost .half-mark { color: var(--loss); }
+
+.half-line {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* The decision score is the number this game is actually about, so it is the
+ * largest thing on the screen rather than one of three equal cells. */
+.verdict-figure {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule);
+}
+
+.big-figure {
+  display: block;
+  margin: var(--s1) 0 var(--s2);
+  font-size: 66px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.big-figure.good  { color: var(--gain); }
+.big-figure.bad   { color: var(--loss); }
+.big-figure.level { color: var(--ink); }
+
+.verdict-figure .prose { margin: 0; max-width: 44ch; }
+
+.result-verdict {
+  margin: var(--s2) 0 0;
+  text-wrap: balance;
+  font-family: var(--face-txt);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.share {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  font-family: var(--face-num);
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.result-figures {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap);
+  margin-top: var(--s4);
+}
+
+.result-figures > div {
+  padding: 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.figure { display: block; margin-top: 4px; font-size: 22px; font-weight: 700; }
+
+.result-actions { display: grid; gap: 10px; margin-top: 24px; }
+
+.error {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--loss);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+/* Colophon ---------------------------------------------------------------- */
+
+.colophon {
+  margin-top: 44px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--face-txt);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+/* margin-block, not the shorthand: the shorthand would reset the auto inline
+ * margins that centre these paragraphs on the page. */
+.colophon p { margin-block: 0 8px; }
+.colophon a { color: var(--dim); }
+
+/* Narrow phones ----------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .target-figure { font-size: 52px; }
+  .sb-main { font-size: 40px; }
+  .bowlers { grid-template-columns: 1fr; }
+
+  /* The pick list is a flex row now, so the old grid rule stopped applying and
+   * two cards were sharing a phone's width between them. */
+  .picks > .pick { flex-basis: 100%; }
+
+  /* Five controls in a row do not fit, and wrapping them into five ragged rows
+   * is worse than two tidy ones. */
+  .filter-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .filter-row .range input { width: 100%; }
+  .filter-row .link-button { grid-column: 1 / -1; justify-self: start; }
+
+  .halves { grid-template-columns: 1fr; }
+  .result-figures { grid-template-columns: 1fr 1fr; }
+  .claim-row { flex-wrap: wrap; }
+  .claim-row .primary { width: 100%; }
+  .mh-runs { font-size: 8px; }
+  .mh-plot { height: 64px; }
+}
+
+/* Reduced motion.
+ *
+ * The over reveal is the only orchestrated moment in the interface, so this
+ * turns it into an instant state change rather than merely a faster one. The
+ * pacing is also disabled in JavaScript, which is what actually matters: an
+ * animation that still takes four seconds to tell you the score is not made
+ * accessible by removing its transitions. */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Menu and onboarding ------------------------------------------------------
+ *
+ * The first screen has one job: make someone who has never seen this
+ * understand it before they decide whether to care. Three numbered steps, then
+ * the one sentence that says where the difficulty is. Everything else waits.
+ */
+
+.howto {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.howto li {
+  position: relative;
+  padding: 12px 0 12px 38px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--face-txt);
+  font-size: 16px;
+  line-height: 1.5;
+  color: #C9C4B8;
+  counter-increment: step;
+}
+
+.howto li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  font-family: var(--face-num);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dim);
+}
+
+.howto b { color: var(--ink); font-weight: 600; }
+
+.subtle { color: var(--dim); font-size: 15px; }
+
+.modes { display: grid; gap: 10px; margin-top: 24px; }
+
+/* The three ways in.
+ *
+ * A rule down the left edge rather than a full border: it marks the active
+ * choice the way a scorer marks a line, and it means the three cards read as a
+ * list of options instead of three competing boxes.
+ */
+.mode {
+  position: relative;
+  min-height: var(--tap);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  background: var(--panel);
+  border-top-color: var(--lip);
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  gap: 3px;
+}
+
+.mode:hover { border-color: var(--dim); border-left-color: var(--ink); background: var(--panel2); }
+.mode:first-child { border-left-color: var(--level); }
+
+.mode-name { font-size: 17px; font-weight: 600; letter-spacing: -0.005em; }
+.mode-sub  { font-size: 14px; color: var(--dim); font-family: var(--face-txt); }
+
+.mode-tag {
+  margin: 0 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--level);
+}
+
+/* Draft ------------------------------------------------------------------- */
+
+.budget-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  margin: 16px 0 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--board);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.budget-bar > div {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+}
+
+.budget { display: block; font-size: 12px; color: var(--dim); margin-top: 2px; }
+.budget.over { color: var(--loss); font-weight: 600; }
+
+.sub-heading {
+  margin: 22px 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.hint { font-size: 11px; color: var(--faint); letter-spacing: 0.06em; }
+
+.picks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.pick {
+  min-height: 62px;
+  padding: 9px 10px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1px 9px;
+  align-content: center;
+  align-items: center;
+  transition: border-color var(--quick) var(--ease),
+              background var(--quick) var(--ease),
+              transform var(--quick) var(--ease);
+}
+
+.pick .mark { grid-row: 1 / span 2; }
+
+.pick:hover:not(:disabled) { border-color: var(--dim); transform: translateY(-1px); }
+.pick:active:not(:disabled) { transform: translateY(0) scale(0.99); }
+.pick.on { border-color: var(--ink); background: var(--panel2); }
+.pick.on .mark { border-color: var(--ink); color: var(--ink); }
+.pick:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.pick-name { grid-column: 2; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.pick-style {
+  grid-column: 2;
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.02em;
+}
+.pick-cost { grid-column: 3; grid-row: 1 / span 2; }
+
+.pick-cost {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--level);
+}
+
+.pick.on .pick-cost { color: var(--ink); }
+
+.draft-note { margin-top: 16px; font-size: 13px; color: var(--dim); min-height: 20px; }
+
+/* Play screen clarity ------------------------------------------------------ */
+
+.phase-banner {
+  margin: 18px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--ink);
+  background: var(--panel);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.phase-banner b { color: var(--ink); }
+.phase-banner.batting { border-left-color: var(--level); }
+
+
+@media (max-width: 380px) {
+  .picks { grid-template-columns: 1fr; }
+  .budget-bar { grid-template-columns: 1fr; }
+}
+
+/* The crease: both batters, not just the striker -------------------------- */
+
+.crease {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bat {
+  position: relative;
+  padding: 10px 12px 10px 46px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  min-height: 58px;
+}
+
+#bat-striker { border-color: var(--dim); }
+
+/* Player marks are monograms rather than photographs. Match photography is
+ * owned by agencies and there is no licensed source for it, so initials set in
+ * the scoreboard's own face are both honest and a better fit than a borrowed
+ * headshot would be. */
+.mark {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  background: var(--panel2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+}
+
+/* On a crease card the mark is pinned to the corner, because the card also
+ * carries the strike marker and the figures and there is no room for a column. */
+.bat .mark { position: absolute; left: 10px; top: 10px; }
+
+#bat-striker .mark { border-color: var(--ink); color: var(--ink); }
+
+.bat-who { display: block; }
+.bat-name { display: block; font-size: 13px; font-weight: 600; line-height: 1.25; }
+.bat-team {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+}
+.bat-figs { display: block; font-size: 12px; color: var(--dim); }
+
+.on-strike {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--level);
+}
+
+.of-twenty { color: var(--faint); letter-spacing: 0.08em; }
+
+/* Draft search ------------------------------------------------------------ */
+
+.search {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--face-num);
+  font-size: 14px;
+}
+
+.search::placeholder { color: var(--faint); }
+.search:focus { outline: none; border-color: var(--dim); }
+
+.picks { max-height: 340px; overflow-y: auto; padding-right: 2px; }
+
+/* Moments -----------------------------------------------------------------
+ *
+ * Two events in cricket are worth marking and no others: a wicket and a big
+ * hit. Everything else is a number changing. These are deliberately short and
+ * small, because an interface that celebrates every single is exhausting by the
+ * third over, and because the over reveal is already the moment that carries
+ * the drama.
+ */
+
+/* A wicket: the ball strikes and the board flinches, the way a scoreboard
+ * operator's hand slips. */
+@keyframes strike {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-3px); }
+  40%  { transform: translateX(3px); }
+  60%  { transform: translateX(-2px); }
+  80%  { transform: translateX(1px); }
+  100% { transform: translateX(0); }
+}
+
+.scoreboard.wicket { animation: strike 320ms ease-out; }
+
+/* The stumps, drawn rather than fetched: three lines that scatter. */
+.stumps {
+  display: inline-flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 22px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.stump {
+  width: 2px;
+  height: 18px;
+  background: var(--loss);
+  transform-origin: bottom center;
+}
+
+.ball.wicket .stumps .stump:nth-child(1) { animation: fall-l 420ms 60ms ease-out both; }
+.ball.wicket .stumps .stump:nth-child(2) { animation: fall-c 420ms 60ms ease-out both; }
+.ball.wicket .stumps .stump:nth-child(3) { animation: fall-r 420ms 60ms ease-out both; }
+
+@keyframes fall-l { to { transform: rotate(-38deg) translateY(2px); opacity: 0.55; } }
+@keyframes fall-c { to { transform: rotate(6deg)  translateY(3px); opacity: 0.55; } }
+@keyframes fall-r { to { transform: rotate(41deg) translateY(2px); opacity: 0.55; } }
+
+/* A six: the ball leaves. A four: it races away along the ground. */
+@keyframes sail {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  70%  { transform: translate(16px, -20px) scale(0.72); opacity: 0.85; }
+  100% { transform: translate(26px, -30px) scale(0.5); opacity: 0; }
+}
+
+@keyframes race {
+  0%   { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(22px); opacity: 0; }
+}
+
+.cherry {
+  position: absolute;
+  right: 4px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--loss);
+  box-shadow: 0 0 0 1px rgba(232, 228, 218, 0.25);
+  pointer-events: none;
+}
+
+.ball { position: relative; overflow: visible; }
+.ball.six .cherry  { animation: sail 620ms 80ms ease-out both; }
+.ball.four .cherry { animation: race 460ms 80ms ease-out both; }
+
+/* A big over gets one quiet acknowledgement on the strip, not a fanfare. */
+@keyframes swell {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+
+.mh-col.big .mh-bar { animation: swell 420ms var(--ease); transform-origin: bottom; }
+
+
+/* Names and teams ---------------------------------------------------------
+ *
+ * The same block wherever a player is listed: a monogram, the name, and under
+ * it the side they are known for. The team is the thing that places a name the
+ * reader may not recognise, which matters now that the draft reaches back to
+ * players who last appeared in 2013.
+ *
+ * Team names appear as plain text and nothing else. No crest, no wordmark and
+ * no kit colour: where somebody played is a fact worth stating, whereas the
+ * marks belong to the clubs. */
+.who { min-width: 0; display: block; }
+
+.who-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.who-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+
+.team {
+  padding: 1px 4px;
+  border: 1px solid var(--rule);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.attack-list .who-name { font-size: 15px; }
+
+/* The win-probability meter ------------------------------------------------
+ *
+ * The percentage is already on the board, but a number alone does not show a
+ * swing. The bar makes the same figure legible at a glance and, more usefully,
+ * makes the movement between overs visible as movement. */
+.sb-meter {
+  grid-column: 1 / -1;
+  height: 3px;
+  margin-top: 12px;
+  background: var(--rule);
+  overflow: hidden;
+}
+
+.sb-meter span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--ink);
+  transition: width var(--slow) var(--ease);
+}
+
+.sb-wp-figure { transition: color var(--calm) var(--ease); }
+.sb-wp-figure.rising { color: var(--gain); }
+.sb-wp-figure.falling { color: var(--loss); }
+
+/* Motion ------------------------------------------------------------------ */
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A wicket knocks the board rather than flashing it. The displacement is under
+ * three pixels: enough to register, not enough to have to wait for. */
+@keyframes knock {
+  0%   { transform: none; }
+  25%  { transform: translate(-2px, 1px); }
+  55%  { transform: translate(2px, -1px); }
+  100% { transform: none; }
+}
+
+.entering { animation: screen-in var(--calm) var(--ease) both; }
+
+.scoreboard.lost { animation: knock 300ms var(--ease); }
+
+.mode, .primary, .ghost, .intent {
+  transition: transform var(--quick) var(--ease),
+              border-color var(--quick) var(--ease),
+              background var(--quick) var(--ease);
+}
+.mode:hover, .intent:not(:disabled):hover { transform: translateY(-1px); }
+.mode:active, .primary:active, .ghost:active, .intent:active { transform: scale(0.99); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ground,
+  .attack-list li,
+  .bowler,
+  .entering,
+  .ground-stage svg,
+  .scoreboard.lost { animation: none; }
+  .sb-meter span { transition: none; }
+  .mode:hover, .intent:not(:disabled):hover,
+  .bowler:not(:disabled):hover, .pick:hover:not(:disabled) { transform: none; }
+}
+
+/* Club colour -------------------------------------------------------------
+ *
+ * A tint, carried on --tint and used nowhere without a fallback, so a player
+ * or a ground with no club on record simply looks like the rest of the board.
+ *
+ * It is deliberately an edge and a wash rather than a fill. The point is to
+ * place somebody at a glance — Rohit Sharma is blue, Dhoni is yellow — and a
+ * card printed in full club colour would read as an official one, which it is
+ * not.
+ */
+.mark {
+  border-color: color-mix(in srgb, var(--tint, transparent) 55%, var(--rule));
+  background: color-mix(in srgb, var(--tint, transparent) 14%, var(--panel2));
+  color: color-mix(in srgb, var(--tint, transparent) 45%, var(--dim));
+}
+
+#bat-striker .mark { color: var(--ink); }
+
+.team {
+  border-color: color-mix(in srgb, var(--tint, transparent) 45%, var(--rule));
+  color: color-mix(in srgb, var(--tint, transparent) 55%, var(--dim));
+}
+
+/* On a pick card the tint runs down the left edge, which is enough to sort a long
+ * list by club without any of it shouting. */
+.pick { border-left: 3px solid color-mix(in srgb, var(--tint, transparent) 60%, var(--rule)); }
+.pick.on { border-left-color: color-mix(in srgb, var(--tint, transparent) 85%, var(--ink)); }
+
+.ground { border-color: color-mix(in srgb, var(--tint, transparent) 35%, var(--rule)); }
+
+/* The play screen, in two columns -----------------------------------------
+ *
+ * On a phone this is one column and reads top to bottom: what happened, then
+ * what to do about it. On anything wider that ordering costs a scroll every
+ * single over, because the score is at the top and the bowlers are at the
+ * bottom, and a player ends up moving between them forty times a game.
+ *
+ * So on a wide screen the board moves to the right and sticks there while the
+ * choices scroll on the left. Both halves are visible at the moment the
+ * decision is made, which is the only moment that matters.
+ */
+@media (min-width: 940px) {
+  :root { --gutter: 24px; }
+
+  #screen-play {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: var(--s5);
+    align-items: start;
+    max-width: 1080px;
+  }
+
+  .play-main { grid-column: 1; grid-row: 1; min-width: 0; }
+
+  .play-side {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: var(--s3);
+    min-width: 0;
+  }
+
+  /* In the side column the board is the top element, so its own top margin is
+   * not wanted. */
+  .play-side .phase-banner { margin-top: 0; }
+
+  /* Two bowler cards side by side in the narrower column truncated every name
+   * to "M Theek…" and broke "right-arm pace" over three lines. There is far
+   * more vertical room than horizontal here, so the five cards stack. */
+  .bowlers { grid-template-columns: 1fr; }
+
+  /* A bar chart is readable at fourteen pixels a column in a way that a boxed
+   * number never was, so both innings stay on one row of twenty here. */
+  .play-side .mh-plot { height: 66px; }
+}
+
+/* The landing page --------------------------------------------------------
+ *
+ * A full-height opening: the name, what the game is in one line, today's
+ * target, and the three ways in. The ground is drawn behind it, dimmed hard,
+ * so the first thing on screen is a place rather than a menu.
+ *
+ * Below it, and only below it, the explanation. Somebody who already knows the
+ * game never has to scroll past a tutorial to reach the button, and somebody
+ * who does not can scroll once and find it.
+ */
+#screen-menu { max-width: none !important; }
+
+.hero {
+  position: relative;
+  /* Out to the edges of the screen, then back in for the type. */
+  margin-inline: calc(-1 * var(--gutter));
+  padding-inline: var(--gutter);
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding: var(--s6) 0;
+  overflow: hidden;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.3;
+  /* Faded out towards the type so nothing has to compete with the wordmark. */
+  mask-image: linear-gradient(to bottom, transparent, #000 55%, #000 75%, transparent);
+}
+
+.hero-art svg { width: 100%; height: 100%; object-fit: cover; }
+
+.hero-body {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.hero-mark {
+  margin: 0;
+  font-size: clamp(64px, 16vw, 148px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 0.82;
+}
+
+.hero-line {
+  margin: var(--s3) 0 0;
+  font-family: var(--face-txt);
+  font-style: italic;
+  font-size: clamp(17px, 3.4vw, 23px);
+  color: var(--dim);
+}
+
+.hero-today {
+  margin: var(--s5) 0 var(--s4);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.hero-target {
+  display: block;
+  margin-top: var(--s1);
+  font-size: clamp(44px, 9vw, 72px);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+.hero-where {
+  display: block;
+  margin-top: var(--s1);
+  font-family: var(--face-txt);
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.hero-more {
+  position: absolute;
+  left: 50%;
+  bottom: var(--s4);
+  transform: translateX(-50%);
+  z-index: 1;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-decoration: none;
+}
+.hero-more::after { content: " \2193"; }
+.hero-more:hover { color: var(--dim); }
+
+.explainer {
+  max-width: 680px;
+  margin-inline: auto;
+  padding: var(--s6) 0 var(--s5);
+  border-top: 1px solid var(--rule);
+  scroll-margin-top: var(--s4);
+}
+
+.link-button {
+  margin-top: var(--s4);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-button:hover { color: var(--ink); }
+
+/* The leaderboard --------------------------------------------------------- */
+
+.board { margin: var(--s4) 0 0; padding: 0; list-style: none; }
+
+.board-row {
+  display: grid;
+  grid-template-columns: 2.2ch 1fr auto auto;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--rule);
+  animation: rise var(--calm) var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+.board-rank { font-size: 12px; color: var(--faint); font-weight: 700; }
+.board-who  { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+
+.board-tag {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.board-row.solved .board-tag { color: var(--gain); }
+.board-row.solved .board-rank { color: var(--ink); }
+
+.board-score { font-size: 17px; font-weight: 700; }
+
+.empty {
+  margin-top: var(--s4);
+  padding: var(--s4);
+  border: 1px dashed var(--rule);
+  font-family: var(--face-txt);
+  color: var(--dim);
+  text-align: center;
+}
+
+/* Filters ----------------------------------------------------------------- */
+
+.filters { margin-bottom: var(--s2); }
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s2) var(--s3);
+  margin-top: var(--s2);
+}
+
+.filter-row label { display: grid; gap: 3px; }
+
+.filter-row select,
+.range input {
+  min-height: 32px;
+  padding: 4px 6px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.filter-row select:hover { border-color: var(--dim); }
+
+.range { display: flex; align-items: center; gap: 6px; }
+.range input { width: 108px; padding: 0; accent-color: var(--ink); }
+.range output { font-size: 13px; font-weight: 700; min-width: 2ch; }
+
+.filter-row .link-button { margin-top: 0; align-self: end; min-height: 32px; }
+
+.filter-count {
+  margin: var(--s2) 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+/* The pick list is ordered by the filter, so it must be a flex row that
+ * respects `order` rather than a grid that ignores it. */
+.picks { display: flex; flex-wrap: wrap; }
+.picks > .pick { flex: 1 1 calc(50% - 4px); min-width: 0; }
+
+/* Claiming a place -------------------------------------------------------- */
+
+.claim {
+  margin-top: var(--s5);
+  padding: var(--s4);
+  border: 1px solid var(--gain);
+  border-left-width: 3px;
+  background: var(--panel);
+}
+
+.claim-head { margin: 0 0 var(--s3); font-size: 15px; font-weight: 600; }
+
+.claim-row { display: flex; gap: var(--s2); align-items: stretch; }
+.claim-row .search { margin: 0; flex: 1; }
+.claim-row .primary { margin: 0; width: auto; padding-inline: var(--s4); }
+
+.claim-note { margin: var(--s2) 0 0; font-size: 12px; color: var(--dim); }
+.claim.done { border-color: var(--rule); }
+.claim.done .claim-note { color: var(--gain); }
+
+/* The batting order -------------------------------------------------------
+ *
+ * All eleven. The crease panel shows the partnership, which is what is
+ * happening; this shows what is left, which is what the next decision turns on.
+ */
+.squad { margin-top: var(--s4); }
+
+.squad-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 var(--s2);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.squad-sub { letter-spacing: 0.04em; color: var(--dim); }
+
+.order { margin: 0; padding: 0; list-style: none; }
+
+.bat-row {
+  display: grid;
+  grid-template-columns: 2ch 1fr auto;
+  gap: var(--s2);
+  align-items: baseline;
+  padding: 5px 0 5px 7px;
+  border-bottom: 1px solid var(--rule);
+  border-left: 3px solid transparent;
+  font-size: 13px;
+}
+
+.bat-pos { font-size: 10px; color: var(--faint); }
+.bat-who-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bat-figs-small { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* At the crease: the club tint on the edge and the name in full ink. */
+.bat-row.in {
+  border-left-color: color-mix(in srgb, var(--tint, transparent) 70%, var(--ink));
+  background: var(--panel);
+}
+.bat-row.in .bat-who-name { font-weight: 600; }
+
+/* Out: struck through, the way a scorer crosses a name off. */
+.bat-row.out .bat-who-name { color: var(--faint); text-decoration: line-through; }
+.bat-row.out .bat-figs-small { color: var(--faint); }
+
+/* Yet to bat: present but plainly not involved yet. */
+.bat-row.yet .bat-who-name { color: var(--dim); }
+
+/* The phone --------------------------------------------------------------
+ *
+ * In one column the board is above the choices, so picking a bowler put the
+ * score off the top of the screen and every over cost a scroll up and a scroll
+ * back. The scoreboard pins itself to the top instead: it is the one thing that
+ * has to be readable at the moment of the decision, and it is small enough to
+ * give up forty pixels for.
+ */
+@media (max-width: 939px) {
+  .play-side .scoreboard {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-top: var(--s2);
+    padding: var(--s3) var(--s3) var(--s2);
+    /* Opaque, because the page scrolls underneath it. */
+    background: var(--panel2);
+    box-shadow: 0 6px 18px -12px #000;
+  }
+
+  .play-side .sb-main { font-size: 44px; }
+  .play-side .sb-meter { margin-top: var(--s2); }
+
+  /* The banner is a label, not information, so it scrolls away and leaves the
+   * sticky height to the numbers. */
+  .phase-banner { margin-top: var(--s2); }
+}

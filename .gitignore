@@ -11,6 +11,11 @@
 # Exported training matrices. Regenerable from the corpus.
 /data/out/*.csv
 
+# The results database. Local play data, not source.
+/data/out/*.db
+/data/out/*.db-shm
+/data/out/*.db-wal
+
 # The LightGBM text model is four megabytes of trees; the metadata, the
 # parity fixtures and the reliability plots are small and are committed,
 # because they are the evidence that the model is calibrated and that Go
@@ -34,3 +39,10 @@ ml/.venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Local configuration. The server reads its master secret from the
+# environment, and that secret must never be committed: with it, every ball
+# of every day could be computed before a single decision was made.
+.env
+.env.local
+.env.*.local

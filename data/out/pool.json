@@ -1,0 +1,1551 @@
+{
+  "generated_at": "2026-08-29T10:59:23Z",
+  "criteria": {
+    "MinWinRate": 0.35,
+    "MaxWinRate": 0.65,
+    "MinDecisionSpread": 0.018,
+    "Games": 1200
+  },
+  "situations": [
+    {
+      "date": "p1787974962121351900-1",
+      "target": 196,
+      "venue": "Sharjah Cricket Stadium",
+      "venue_id": 31,
+      "attack": [
+        "CV Varun",
+        "JO Holder",
+        "MP Yadav",
+        "LH Ferguson",
+        "Sandeep Sharma"
+      ],
+      "attack_ids": [
+        322,
+        51,
+        648,
+        172,
+        770
+      ],
+      "batting": [
+        "KL Rahul",
+        "SV Samson",
+        "Shubman Gill",
+        "Q de Kock",
+        "DA Miller",
+        "D Padikkal",
+        "YBK Jaiswal",
+        "MP Stoinis",
+        "Mandeep Singh",
+        "R Parag",
+        "H Klaasen"
+      ],
+      "batting_ids": [
+        647,
+        597,
+        662,
+        199,
+        800,
+        155,
+        390,
+        814,
+        731,
+        17,
+        109
+      ],
+      "evaluation": {
+        "defend_rate": 0.3825,
+        "chase_rate": 0.365,
+        "decision_spread": 0.020108874012605242,
+        "mean_chase_score": 178.6925,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:43:07Z"
+    },
+    {
+      "date": "p1787975007015245300-3",
+      "target": 189,
+      "venue": "Maharashtra Cricket Association Stadium",
+      "venue_id": 27,
+      "attack": [
+        "Mustafizur Rahman",
+        "M Ashwin",
+        "JC Archer",
+        "C Sakariya",
+        "MR Marsh"
+      ],
+      "attack_ids": [
+        30,
+        857,
+        301,
+        157,
+        218
+      ],
+      "batting": [
+        "RG Sharma",
+        "AM Rahane",
+        "KL Rahul",
+        "MS Dhoni",
+        "RA Jadeja",
+        "MA Agarwal",
+        "D Padikkal",
+        "KS Williamson",
+        "MP Stoinis",
+        "Abhishek Sharma",
+        "JM Bairstow"
+      ],
+      "batting_ids": [
+        412,
+        147,
+        647,
+        260,
+        954,
+        0,
+        155,
+        779,
+        814,
+        913,
+        618
+      ],
+      "evaluation": {
+        "defend_rate": 0.4025,
+        "chase_rate": 0.405,
+        "decision_spread": 0.02081146187364839,
+        "mean_chase_score": 171.425,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:43:59Z"
+    },
+    {
+      "date": "p1787975039222775900-4",
+      "target": 196,
+      "venue": "Rajiv Gandhi International Stadium, Uppal, Hyderabad",
+      "venue_id": 51,
+      "attack": [
+        "WD Parnell",
+        "RD Chahar",
+        "Mohsin Khan (2)",
+        "DR Sams",
+        "DJ Hooda"
+      ],
+      "attack_ids": [
+        209,
+        167,
+        729,
+        757,
+        410
+      ],
+      "batting": [
+        "AM Rahane",
+        "MS Dhoni",
+        "AT Rayudu",
+        "Ishan Kishan",
+        "AR Patel",
+        "Abhishek Sharma",
+        "KK Nair",
+        "R Parag",
+        "H Klaasen",
+        "P Simran Singh",
+        "SO Hetmyer"
+      ],
+      "batting_ids": [
+        147,
+        260,
+        405,
+        414,
+        162,
+        913,
+        537,
+        17,
+        109,
+        533,
+        255
+      ],
+      "evaluation": {
+        "defend_rate": 0.4275,
+        "chase_rate": 0.4275,
+        "decision_spread": 0.021685833094123703,
+        "mean_chase_score": 180.06,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:44:23Z"
+    },
+    {
+      "date": "p1787975112081208200-7",
+      "target": 202,
+      "venue": "M Chinnaswamy Stadium",
+      "venue_id": 0,
+      "attack": [
+        "DJ Bravo",
+        "Suyash Sharma",
+        "DJ Willey",
+        "KK Ahmed",
+        "JD Unadkat"
+      ],
+      "attack_ids": [
+        483,
+        536,
+        452,
+        587,
+        100
+      ],
+      "batting": [
+        "AM Rahane",
+        "KD Karthik",
+        "F du Plessis",
+        "AT Rayudu",
+        "RR Pant",
+        "Q de Kock",
+        "KS Williamson",
+        "N Pooran",
+        "S Dube",
+        "DJ Hooda",
+        "P Simran Singh"
+      ],
+      "batting_ids": [
+        147,
+        715,
+        185,
+        405,
+        521,
+        199,
+        779,
+        182,
+        598,
+        410,
+        533
+      ],
+      "evaluation": {
+        "defend_rate": 0.4125,
+        "chase_rate": 0.4125,
+        "decision_spread": 0.018279694865568453,
+        "mean_chase_score": 184.9775,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:45:33Z"
+    },
+    {
+      "date": "p1787975133053051200-8",
+      "target": 202,
+      "venue": "Arun Jaitley Stadium, Delhi",
+      "venue_id": 44,
+      "attack": [
+        "MM Ali",
+        "MJ Santner",
+        "G Coetzee",
+        "I Sharma",
+        "VR Aaron"
+      ],
+      "attack_ids": [
+        695,
+        864,
+        179,
+        324,
+        25
+      ],
+      "batting": [
+        "S Dhawan",
+        "F du Plessis",
+        "JC Buttler",
+        "RA Jadeja",
+        "DA Miller",
+        "GJ Maxwell",
+        "RA Tripathi",
+        "AD Russell",
+        "Abhishek Sharma",
+        "R Parag",
+        "SP Narine"
+      ],
+      "batting_ids": [
+        26,
+        185,
+        554,
+        954,
+        800,
+        674,
+        422,
+        697,
+        913,
+        17,
+        569
+      ],
+      "evaluation": {
+        "defend_rate": 0.39,
+        "chase_rate": 0.3975,
+        "decision_spread": 0.019776790636108165,
+        "mean_chase_score": 185.0575,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:45:48Z"
+    },
+    {
+      "date": "p1787975161299653200-10",
+      "target": 196,
+      "venue": "Rajiv Gandhi International Stadium, Uppal",
+      "venue_id": 6,
+      "attack": [
+        "RD Chahar",
+        "RG Sharma",
+        "Mohammad Nabi",
+        "KK Ahmed",
+        "I Sharma"
+      ],
+      "attack_ids": [
+        167,
+        412,
+        350,
+        587,
+        324
+      ],
+      "batting": [
+        "RG Sharma",
+        "JC Buttler",
+        "N Rana",
+        "GJ Maxwell",
+        "D Padikkal",
+        "N Pooran",
+        "MR Marsh",
+        "AK Markram",
+        "DJ Bravo",
+        "JM Bairstow",
+        "SO Hetmyer"
+      ],
+      "batting_ids": [
+        412,
+        554,
+        941,
+        674,
+        155,
+        182,
+        218,
+        379,
+        483,
+        618,
+        255
+      ],
+      "evaluation": {
+        "defend_rate": 0.37,
+        "chase_rate": 0.3925,
+        "decision_spread": 0.01896400701213059,
+        "mean_chase_score": 178.705,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:46:17Z"
+    },
+    {
+      "date": "p1787975177640777700-11",
+      "target": 193,
+      "venue": "Maharashtra Cricket Association Stadium",
+      "venue_id": 27,
+      "attack": [
+        "KH Pandya",
+        "B Kumar",
+        "AJ Tye",
+        "PVD Chameera",
+        "AD Russell"
+      ],
+      "attack_ids": [
+        323,
+        164,
+        439,
+        183,
+        697
+      ],
+      "batting": [
+        "KL Rahul",
+        "KD Karthik",
+        "AT Rayudu",
+        "RR Pant",
+        "Q de Kock",
+        "GJ Maxwell",
+        "D Padikkal",
+        "AJ Finch",
+        "N Pooran",
+        "R Parag",
+        "P Simran Singh"
+      ],
+      "batting_ids": [
+        647,
+        715,
+        405,
+        521,
+        199,
+        674,
+        155,
+        682,
+        182,
+        17,
+        533
+      ],
+      "evaluation": {
+        "defend_rate": 0.365,
+        "chase_rate": 0.3575,
+        "decision_spread": 0.02258110378579687,
+        "mean_chase_score": 174.5175,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:46:35Z"
+    },
+    {
+      "date": "p1787975195816911600-12",
+      "target": 204,
+      "venue": "Rajiv Gandhi International Stadium, Uppal, Hyderabad",
+      "venue_id": 51,
+      "attack": [
+        "RA Jadeja",
+        "Suyash Sharma",
+        "HV Patel",
+        "MR Marsh",
+        "Mukesh Choudhary"
+      ],
+      "attack_ids": [
+        954,
+        536,
+        934,
+        218,
+        419
+      ],
+      "batting": [
+        "V Kohli",
+        "RV Uthappa",
+        "AT Rayudu",
+        "WP Saha",
+        "MA Agarwal",
+        "AJ Finch",
+        "N Pooran",
+        "R Parag",
+        "PP Shaw",
+        "Tilak Varma",
+        "JM Bairstow"
+      ],
+      "batting_ids": [
+        688,
+        90,
+        405,
+        951,
+        0,
+        682,
+        182,
+        17,
+        499,
+        642,
+        618
+      ],
+      "evaluation": {
+        "defend_rate": 0.4075,
+        "chase_rate": 0.3925,
+        "decision_spread": 0.01900674595036204,
+        "mean_chase_score": 187.8075,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:46:56Z"
+    },
+    {
+      "date": "p1787975216647320900-13",
+      "target": 202,
+      "venue": "Maharashtra Cricket Association Stadium",
+      "venue_id": 27,
+      "attack": [
+        "MM Ali",
+        "V Shankar",
+        "Akash Singh",
+        "RP Meredith",
+        "Vijaykumar Vyshak"
+      ],
+      "attack_ids": [
+        695,
+        24,
+        661,
+        355,
+        299
+      ],
+      "batting": [
+        "AM Rahane",
+        "F du Plessis",
+        "MK Pandey",
+        "JC Buttler",
+        "DA Miller",
+        "N Rana",
+        "RA Tripathi",
+        "MP Stoinis",
+        "KH Pandya",
+        "SP Narine",
+        "SO Hetmyer"
+      ],
+      "batting_ids": [
+        147,
+        185,
+        532,
+        554,
+        800,
+        941,
+        422,
+        814,
+        323,
+        569,
+        255
+      ],
+      "evaluation": {
+        "defend_rate": 0.405,
+        "chase_rate": 0.4125,
+        "decision_spread": 0.018781289680031604,
+        "mean_chase_score": 183.865,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:47:17Z"
+    },
+    {
+      "date": "p1787975237404548100-14",
+      "target": 196,
+      "venue": "Dubai International Cricket Stadium",
+      "venue_id": 32,
+      "attack": [
+        "JJ Bumrah",
+        "AJ Tye",
+        "MJ Santner",
+        "JP Behrendorff",
+        "Shivam Mavi"
+      ],
+      "attack_ids": [
+        245,
+        439,
+        864,
+        257,
+        730
+      ],
+      "batting": [
+        "S Dhawan",
+        "MS Dhoni",
+        "SV Samson",
+        "RA Jadeja",
+        "RR Pant",
+        "DA Miller",
+        "KA Pollard",
+        "AD Russell",
+        "N Pooran",
+        "KK Nair",
+        "SO Hetmyer"
+      ],
+      "batting_ids": [
+        26,
+        260,
+        597,
+        954,
+        521,
+        800,
+        599,
+        697,
+        182,
+        537,
+        255
+      ],
+      "evaluation": {
+        "defend_rate": 0.41,
+        "chase_rate": 0.365,
+        "decision_spread": 0.01865833607173812,
+        "mean_chase_score": 181.2625,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:47:31Z"
+    },
+    {
+      "date": "p1787975251364774500-15",
+      "target": 206,
+      "venue": "Arun Jaitley Stadium, Delhi",
+      "venue_id": 44,
+      "attack": [
+        "Rashid Khan",
+        "NM Coulter-Nile",
+        "Simarjeet Singh",
+        "KA Pollard",
+        "SN Thakur"
+      ],
+      "attack_ids": [
+        334,
+        303,
+        175,
+        599,
+        85
+      ],
+      "batting": [
+        "V Kohli",
+        "AM Rahane",
+        "SV Samson",
+        "JC Buttler",
+        "Q de Kock",
+        "RD Gaikwad",
+        "RA Tripathi",
+        "Abhishek Sharma",
+        "R Parag",
+        "SO Hetmyer",
+        "KM Jadhav"
+      ],
+      "batting_ids": [
+        688,
+        147,
+        597,
+        554,
+        199,
+        242,
+        422,
+        913,
+        17,
+        255,
+        555
+      ],
+      "evaluation": {
+        "defend_rate": 0.425,
+        "chase_rate": 0.3975,
+        "decision_spread": 0.018598365708684145,
+        "mean_chase_score": 189.43,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:47:47Z"
+    },
+    {
+      "date": "p1787975267069680900-16",
+      "target": 196,
+      "venue": "Sharjah Cricket Stadium",
+      "venue_id": 31,
+      "attack": [
+        "R Ashwin",
+        "L Ngidi",
+        "Washington Sundar",
+        "KR Sen",
+        "Akash Madhwal"
+      ],
+      "attack_ids": [
+        259,
+        928,
+        907,
+        163,
+        268
+      ],
+      "batting": [
+        "V Kohli",
+        "KL Rahul",
+        "KD Karthik",
+        "F du Plessis",
+        "AT Rayudu",
+        "D Padikkal",
+        "AJ Finch",
+        "KK Nair",
+        "R Parag",
+        "PP Shaw",
+        "AK Markram"
+      ],
+      "batting_ids": [
+        688,
+        647,
+        715,
+        185,
+        405,
+        155,
+        682,
+        537,
+        17,
+        499,
+        379
+      ],
+      "evaluation": {
+        "defend_rate": 0.45,
+        "chase_rate": 0.42,
+        "decision_spread": 0.019411581443444414,
+        "mean_chase_score": 180.6125,
+        "games": 400,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T03:48:07Z"
+    },
+    {
+      "date": "p1787999615436400800-1",
+      "target": 199,
+      "venue": "Eden Gardens",
+      "venue_id": 4,
+      "attack": [
+        "Mustafizur Rahman",
+        "V Shankar",
+        "Washington Sundar",
+        "UT Yadav",
+        "Akash Deep"
+      ],
+      "attack_ids": [
+        30,
+        24,
+        907,
+        762,
+        29
+      ],
+      "batting": [
+        "V Kohli",
+        "RG Sharma",
+        "MK Pandey",
+        "RR Pant",
+        "N Rana",
+        "GJ Maxwell",
+        "AD Russell",
+        "PP Shaw",
+        "SO Hetmyer",
+        "RM Patidar",
+        "KM Jadhav"
+      ],
+      "batting_ids": [
+        688,
+        412,
+        532,
+        521,
+        941,
+        674,
+        697,
+        499,
+        255,
+        744,
+        555
+      ],
+      "evaluation": {
+        "defend_rate": 0.52,
+        "chase_rate": 0.5225,
+        "decision_spread": 0.020616838756719724,
+        "mean_chase_score": 186.50416666666666,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:35:02Z"
+    },
+    {
+      "date": "p1787999702396314800-2",
+      "target": 206,
+      "venue": "Maharashtra Cricket Association Stadium",
+      "venue_id": 27,
+      "attack": [
+        "RA Jadeja",
+        "L Ngidi",
+        "AS Joseph",
+        "A Zampa",
+        "R Shepherd"
+      ],
+      "attack_ids": [
+        954,
+        928,
+        643,
+        69,
+        738
+      ],
+      "batting": [
+        "JC Buttler",
+        "RR Pant",
+        "Q de Kock",
+        "DA Miller",
+        "N Rana",
+        "RD Gaikwad",
+        "B Sai Sudharsan",
+        "MP Stoinis",
+        "KK Nair",
+        "H Klaasen",
+        "KM Jadhav"
+      ],
+      "batting_ids": [
+        554,
+        521,
+        199,
+        800,
+        941,
+        242,
+        797,
+        814,
+        537,
+        109,
+        555
+      ],
+      "evaluation": {
+        "defend_rate": 0.5475,
+        "chase_rate": 0.49333333333333335,
+        "decision_spread": 0.01905136571749466,
+        "mean_chase_score": 193.35333333333332,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:36:22Z"
+    },
+    {
+      "date": "p1787999782803733100-3",
+      "target": 202,
+      "venue": "Eden Gardens, Kolkata",
+      "venue_id": 48,
+      "attack": [
+        "RG Sharma",
+        "Suyash Sharma",
+        "Yash Dayal",
+        "KK Ahmed",
+        "Mohammed Shami"
+      ],
+      "attack_ids": [
+        412,
+        536,
+        407,
+        587,
+        505
+      ],
+      "batting": [
+        "RG Sharma",
+        "S Dhawan",
+        "DA Miller",
+        "N Rana",
+        "HH Pandya",
+        "RA Tripathi",
+        "Abhishek Sharma",
+        "Mandeep Singh",
+        "KK Nair",
+        "DJ Hooda",
+        "RM Patidar"
+      ],
+      "batting_ids": [
+        412,
+        26,
+        800,
+        941,
+        821,
+        422,
+        913,
+        731,
+        537,
+        410,
+        744
+      ],
+      "evaluation": {
+        "defend_rate": 0.5258333333333334,
+        "chase_rate": 0.535,
+        "decision_spread": 0.020702562414851397,
+        "mean_chase_score": 191.3525,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:37:47Z"
+    },
+    {
+      "date": "p1787999867135136700-4",
+      "target": 193,
+      "venue": "Maharashtra Cricket Association Stadium",
+      "venue_id": 27,
+      "attack": [
+        "M Theekshana",
+        "R Tewatia",
+        "G Coetzee",
+        "AK Markram",
+        "R Shepherd"
+      ],
+      "attack_ids": [
+        911,
+        204,
+        179,
+        379,
+        738
+      ],
+      "batting": [
+        "KD Karthik",
+        "SS Iyer",
+        "RA Jadeja",
+        "RR Pant",
+        "WP Saha",
+        "Abhishek Sharma",
+        "KK Nair",
+        "R Parag",
+        "VR Iyer",
+        "RM Patidar",
+        "KM Jadhav"
+      ],
+      "batting_ids": [
+        715,
+        475,
+        954,
+        521,
+        951,
+        913,
+        537,
+        17,
+        585,
+        744,
+        555
+      ],
+      "evaluation": {
+        "defend_rate": 0.5391666666666667,
+        "chase_rate": 0.5366666666666666,
+        "decision_spread": 0.021620391025284017,
+        "mean_chase_score": 182.915,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:39:07Z"
+    },
+    {
+      "date": "p1787999947536150000-5",
+      "target": 193,
+      "venue": "Sharjah Cricket Stadium",
+      "venue_id": 31,
+      "attack": [
+        "DJ Bravo",
+        "Suyash Sharma",
+        "J Suchith",
+        "I Sharma",
+        "VR Aaron"
+      ],
+      "attack_ids": [
+        483,
+        536,
+        230,
+        324,
+        25
+      ],
+      "batting": [
+        "SV Samson",
+        "Shubman Gill",
+        "RD Gaikwad",
+        "RA Tripathi",
+        "S Dube",
+        "Abhishek Sharma",
+        "Tilak Varma",
+        "H Klaasen",
+        "SP Narine",
+        "SO Hetmyer",
+        "KM Jadhav"
+      ],
+      "batting_ids": [
+        597,
+        662,
+        242,
+        422,
+        598,
+        913,
+        642,
+        109,
+        569,
+        255,
+        555
+      ],
+      "evaluation": {
+        "defend_rate": 0.5225,
+        "chase_rate": 0.57,
+        "decision_spread": 0.021595002264071697,
+        "mean_chase_score": 182.9825,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:40:42Z"
+    },
+    {
+      "date": "p1788000042899539500-6",
+      "target": 196,
+      "venue": "Rajiv Gandhi International Stadium, Uppal",
+      "venue_id": 6,
+      "attack": [
+        "PP Chawla",
+        "GJ Maxwell",
+        "AS Joseph",
+        "RP Meredith",
+        "Basil Thampi"
+      ],
+      "attack_ids": [
+        550,
+        674,
+        643,
+        355,
+        481
+      ],
+      "batting": [
+        "AT Rayudu",
+        "JC Buttler",
+        "SS Iyer",
+        "RR Pant",
+        "Ishan Kishan",
+        "RD Gaikwad",
+        "MA Agarwal",
+        "AJ Finch",
+        "AR Patel",
+        "H Klaasen",
+        "JM Bairstow"
+      ],
+      "batting_ids": [
+        405,
+        554,
+        475,
+        521,
+        414,
+        242,
+        0,
+        682,
+        162,
+        109,
+        618
+      ],
+      "evaluation": {
+        "defend_rate": 0.5225,
+        "chase_rate": 0.5091666666666667,
+        "decision_spread": 0.02056623825955791,
+        "mean_chase_score": 184.50583333333333,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:42:15Z"
+    },
+    {
+      "date": "p1788000135540407300-7",
+      "target": 199,
+      "venue": "Sheikh Zayed Stadium",
+      "venue_id": 30,
+      "attack": [
+        "L Ngidi",
+        "Noor Ahmad",
+        "AJ Tye",
+        "PVD Chameera",
+        "Mukesh Kumar"
+      ],
+      "attack_ids": [
+        928,
+        896,
+        439,
+        183,
+        158
+      ],
+      "batting": [
+        "S Dhawan",
+        "SV Samson",
+        "AT Rayudu",
+        "MK Pandey",
+        "JC Buttler",
+        "SS Iyer",
+        "Q de Kock",
+        "AJ Finch",
+        "PP Shaw",
+        "DJ Hooda",
+        "RM Patidar"
+      ],
+      "batting_ids": [
+        26,
+        597,
+        405,
+        532,
+        554,
+        475,
+        199,
+        682,
+        499,
+        410,
+        744
+      ],
+      "evaluation": {
+        "defend_rate": 0.5275,
+        "chase_rate": 0.53,
+        "decision_spread": 0.020704218131894256,
+        "mean_chase_score": 187.59583333333333,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:43:41Z"
+    },
+    {
+      "date": "p1788000221503313600-8",
+      "target": 191,
+      "venue": "Eden Gardens",
+      "venue_id": 4,
+      "attack": [
+        "JJ Bumrah",
+        "JO Holder",
+        "Akash Singh",
+        "Basil Thampi",
+        "DJ Hooda"
+      ],
+      "attack_ids": [
+        245,
+        51,
+        661,
+        481,
+        410
+      ],
+      "batting": [
+        "RG Sharma",
+        "AM Rahane",
+        "MS Dhoni",
+        "RV Uthappa",
+        "SV Samson",
+        "JC Buttler",
+        "RA Tripathi",
+        "AD Russell",
+        "MR Marsh",
+        "SO Hetmyer",
+        "V Shankar"
+      ],
+      "batting_ids": [
+        412,
+        147,
+        260,
+        90,
+        597,
+        554,
+        422,
+        697,
+        218,
+        255,
+        24
+      ],
+      "evaluation": {
+        "defend_rate": 0.52,
+        "chase_rate": 0.5175,
+        "decision_spread": 0.022628355492873384,
+        "mean_chase_score": 180.40416666666667,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:45:25Z"
+    },
+    {
+      "date": "p1788000325129605100-9",
+      "target": 199,
+      "venue": "MA Chidambaram Stadium, Chepauk",
+      "venue_id": 7,
+      "attack": [
+        "MJ Santner",
+        "Avesh Khan",
+        "Harshit Rana",
+        "KR Sen",
+        "VR Aaron"
+      ],
+      "attack_ids": [
+        864,
+        894,
+        423,
+        163,
+        25
+      ],
+      "batting": [
+        "SV Samson",
+        "AT Rayudu",
+        "MK Pandey",
+        "MA Agarwal",
+        "KH Pandya",
+        "KK Nair",
+        "R Parag",
+        "VR Iyer",
+        "P Simran Singh",
+        "KM Jadhav",
+        "V Shankar"
+      ],
+      "batting_ids": [
+        597,
+        405,
+        532,
+        0,
+        323,
+        537,
+        17,
+        585,
+        533,
+        555,
+        24
+      ],
+      "evaluation": {
+        "defend_rate": 0.5408333333333334,
+        "chase_rate": 0.5141666666666667,
+        "decision_spread": 0.01964357738708509,
+        "mean_chase_score": 187.46833333333333,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:46:42Z"
+    },
+    {
+      "date": "p1788000402019505400-10",
+      "target": 199,
+      "venue": "Eden Gardens",
+      "venue_id": 4,
+      "attack": [
+        "PP Chawla",
+        "V Shankar",
+        "Simarjeet Singh",
+        "KA Pollard",
+        "JD Unadkat"
+      ],
+      "attack_ids": [
+        550,
+        24,
+        175,
+        599,
+        100
+      ],
+      "batting": [
+        "DA Warner",
+        "MS Dhoni",
+        "RV Uthappa",
+        "SV Samson",
+        "JC Buttler",
+        "SA Yadav",
+        "HH Pandya",
+        "B Sai Sudharsan",
+        "Abhishek Sharma",
+        "DJ Bravo",
+        "KM Jadhav"
+      ],
+      "batting_ids": [
+        824,
+        260,
+        90,
+        597,
+        554,
+        134,
+        821,
+        797,
+        913,
+        483,
+        555
+      ],
+      "evaluation": {
+        "defend_rate": 0.5316666666666666,
+        "chase_rate": 0.5308333333333334,
+        "decision_spread": 0.020751843626158784,
+        "mean_chase_score": 188.69416666666666,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:48:04Z"
+    },
+    {
+      "date": "p1788000484519426900-11",
+      "target": 189,
+      "venue": "M Chinnaswamy Stadium",
+      "venue_id": 0,
+      "attack": [
+        "RD Chahar",
+        "N Burger",
+        "V Kohli",
+        "SN Thakur",
+        "VR Aaron"
+      ],
+      "attack_ids": [
+        167,
+        246,
+        688,
+        85,
+        25
+      ],
+      "batting": [
+        "MK Pandey",
+        "SS Iyer",
+        "Q de Kock",
+        "WP Saha",
+        "N Rana",
+        "RA Tripathi",
+        "AR Patel",
+        "MP Stoinis",
+        "AD Russell",
+        "MR Marsh",
+        "SP Narine"
+      ],
+      "batting_ids": [
+        532,
+        475,
+        199,
+        951,
+        941,
+        422,
+        162,
+        814,
+        697,
+        218,
+        569
+      ],
+      "evaluation": {
+        "defend_rate": 0.465,
+        "chase_rate": 0.585,
+        "decision_spread": 0.020507832430945575,
+        "mean_chase_score": 179.86833333333334,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:49:41Z"
+    },
+    {
+      "date": "p1788000650767414500-13",
+      "target": 183,
+      "venue": "MA Chidambaram Stadium, Chepauk, Chennai",
+      "venue_id": 41,
+      "attack": [
+        "KH Pandya",
+        "RD Chahar",
+        "MM Sharma",
+        "KA Pollard",
+        "Fazalhaq Farooqi"
+      ],
+      "attack_ids": [
+        323,
+        167,
+        416,
+        599,
+        879
+      ],
+      "batting": [
+        "AT Rayudu",
+        "MK Pandey",
+        "JC Buttler",
+        "SA Yadav",
+        "YBK Jaiswal",
+        "KS Williamson",
+        "RA Tripathi",
+        "MP Stoinis",
+        "P Simran Singh",
+        "SP Narine",
+        "RM Patidar"
+      ],
+      "batting_ids": [
+        405,
+        532,
+        554,
+        134,
+        390,
+        779,
+        422,
+        814,
+        533,
+        569,
+        744
+      ],
+      "evaluation": {
+        "defend_rate": 0.4975,
+        "chase_rate": 0.565,
+        "decision_spread": 0.023042205631445475,
+        "mean_chase_score": 174.14333333333335,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:52:16Z"
+    },
+    {
+      "date": "p1788000736489690500-14",
+      "target": 204,
+      "venue": "Wankhede Stadium, Mumbai",
+      "venue_id": 42,
+      "attack": [
+        "M Ashwin",
+        "K Rabada",
+        "Akash Singh",
+        "Mujeeb Ur Rahman",
+        "R Shepherd"
+      ],
+      "attack_ids": [
+        857,
+        867,
+        661,
+        445,
+        738
+      ],
+      "batting": [
+        "RG Sharma",
+        "S Dhawan",
+        "DA Warner",
+        "F du Plessis",
+        "MK Pandey",
+        "Shubman Gill",
+        "SS Iyer",
+        "RD Gaikwad",
+        "D Padikkal",
+        "MP Stoinis",
+        "H Klaasen"
+      ],
+      "batting_ids": [
+        412,
+        26,
+        824,
+        185,
+        532,
+        662,
+        475,
+        242,
+        155,
+        814,
+        109
+      ],
+      "evaluation": {
+        "defend_rate": 0.5391666666666667,
+        "chase_rate": 0.545,
+        "decision_spread": 0.02061999289527374,
+        "mean_chase_score": 194.51083333333332,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:53:51Z"
+    },
+    {
+      "date": "p1788000831916753600-15",
+      "target": 196,
+      "venue": "Bharat Ratna Shri Atal Bihari Vajpayee Ekana Cricket Stadium, Lucknow",
+      "venue_id": 50,
+      "attack": [
+        "Kuldeep Yadav",
+        "NM Coulter-Nile",
+        "XC Bartlett",
+        "A Zampa",
+        "MP Stoinis"
+      ],
+      "attack_ids": [
+        506,
+        303,
+        211,
+        69,
+        814
+      ],
+      "batting": [
+        "AM Rahane",
+        "MS Dhoni",
+        "SV Samson",
+        "F du Plessis",
+        "Q de Kock",
+        "DA Miller",
+        "WP Saha",
+        "HH Pandya",
+        "D Padikkal",
+        "AD Russell",
+        "KH Pandya"
+      ],
+      "batting_ids": [
+        147,
+        260,
+        597,
+        185,
+        199,
+        800,
+        951,
+        821,
+        155,
+        697,
+        323
+      ],
+      "evaluation": {
+        "defend_rate": 0.5175,
+        "chase_rate": 0.5208333333333334,
+        "decision_spread": 0.02171013343295,
+        "mean_chase_score": 185.1575,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:55:31Z"
+    },
+    {
+      "date": "p1788001031996885500-17",
+      "target": 191,
+      "venue": "MA Chidambaram Stadium, Chepauk",
+      "venue_id": 7,
+      "attack": [
+        "YS Chahal",
+        "M Ashwin",
+        "JR Hazlewood",
+        "KA Jamieson",
+        "Vijaykumar Vyshak"
+      ],
+      "attack_ids": [
+        311,
+        857,
+        11,
+        375,
+        299
+      ],
+      "batting": [
+        "KL Rahul",
+        "KD Karthik",
+        "Shubman Gill",
+        "SA Yadav",
+        "YBK Jaiswal",
+        "RA Tripathi",
+        "AJ Finch",
+        "R Parag",
+        "PP Shaw",
+        "H Klaasen",
+        "RM Patidar"
+      ],
+      "batting_ids": [
+        647,
+        715,
+        662,
+        134,
+        390,
+        422,
+        682,
+        17,
+        499,
+        109,
+        744
+      ],
+      "evaluation": {
+        "defend_rate": 0.5175,
+        "chase_rate": 0.5533333333333333,
+        "decision_spread": 0.022406652411804884,
+        "mean_chase_score": 181.60416666666666,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:58:36Z"
+    },
+    {
+      "date": "p1788001116872139000-18",
+      "target": 189,
+      "venue": "Feroz Shah Kotla",
+      "venue_id": 2,
+      "attack": [
+        "B Kumar",
+        "Sakib Hussain",
+        "A Mishra",
+        "DR Sams",
+        "SM Curran"
+      ],
+      "attack_ids": [
+        164,
+        139,
+        385,
+        757,
+        876
+      ],
+      "batting": [
+        "RG Sharma",
+        "S Dhawan",
+        "AM Rahane",
+        "F du Plessis",
+        "MK Pandey",
+        "JC Buttler",
+        "GJ Maxwell",
+        "D Padikkal",
+        "AJ Finch",
+        "AD Russell",
+        "Tilak Varma"
+      ],
+      "batting_ids": [
+        412,
+        26,
+        147,
+        185,
+        532,
+        554,
+        674,
+        155,
+        682,
+        697,
+        642
+      ],
+      "evaluation": {
+        "defend_rate": 0.5308333333333334,
+        "chase_rate": 0.5541666666666667,
+        "decision_spread": 0.028102193421735065,
+        "mean_chase_score": 178.58416666666668,
+        "games": 1200,
+        "accepted": true
+      },
+      "generated_at": "2026-08-29T10:59:23Z"
+    }
+  ]
+}

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
 )
 
 // This package imports corpus, attr and features for their type vocabulary
@@ -41,6 +41,13 @@ type Player struct {
 	Name  string
 	Hand  attr.Hand
 	Class attr.BowlClass
+
+	// Team is the side the player is best known for, abbreviated, and Years is
+	// the span they played across. Neither affects a single ball; they are here
+	// so that the names on screen are recognisable as people rather than rows,
+	// which for a player who retired a decade ago is most of what places them.
+	Team  string
+	Years string
 }
 
 // Puzzle is one day's fixed problem. It is identical for every player.
@@ -82,9 +89,102 @@ func (i Intent) lambda() float64 {
 	case Block:
 		return -0.30
 	case Attack:
-		return 0.30
+		return 0.34
 	}
 	return 0
+}
+
+// ParRate is the run rate an ordinary over produces without anyone taking a
+// risk for it. It is the line above which attacking is necessary and below
+// which it is a choice.
+const ParRate = 8.5
+
+// recklessness is how much extra a wicket costs for attacking when the chase
+// did not require it, and freeRate is the required rate below which that cost
+// starts to apply at all.
+//
+// A fixed tilt made the timing of the attacking overs worth nothing: spending
+// them in the first six overs and spending them in the last six both chased
+// about 46% of the time, because the tilt shifted the distribution by the same
+// amount wherever it was applied. That is not how a chase works. Swinging at
+// everything while the required rate is under control is how wickets are thrown
+// away for runs nobody needed; swinging when the rate has climbed is simply the
+// risk the situation already forced on you.
+//
+// So the run side of attacking stays constant and the wicket side does not.
+// The first attempt at this overcorrected. Measured over the middle overs, an
+// attacking over bought about 1.2 extra runs and, with the rate under control,
+// almost three times the chance of a wicket: at a required rate of three the
+// wicket chance went from 2.8% to 7.9%, which is not a decision anybody should
+// make and so not a decision worth offering. Worse, the penalty began at par
+// itself, so an ordinary chase that was merely on schedule was already being
+// charged for aggression.
+//
+// The cost now starts only once the chase is comfortably ahead of the rate, and
+// it is roughly a third of what it was. Attacking is a genuine choice across
+// most of an innings and a bad one only when the runs are not needed.
+const (
+	recklessness = 1.8
+	freeRate     = 7.0
+)
+
+// riskFactor returns the multiplier on the chance of a wicket for an intent, in
+// a chase needing a given rate.
+func riskFactor(i Intent, required float64) float64 {
+	if i != Attack {
+		return 1
+	}
+	if required >= freeRate {
+		return 1
+	}
+	// Zero at the free rate, rising as the chase gets easier and attacking
+	// becomes less and less necessary.
+	surplus := (freeRate - required) / freeRate
+	return 1 + recklessness*surplus
+}
+
+// ApplyIntent tilts a base outcome distribution for an intent, given how fast
+// the batting side still has to score.
+//
+// Rotating leaves the model's own view alone. The others move the distribution
+// toward or away from risk, and attacking additionally raises the chance of a
+// wicket when the situation did not call for it.
+func ApplyIntent(base []float64, i Intent, required float64, dst []float64) {
+	Tilt(base, aggressionValue, i.lambda(), dst)
+
+	f := riskFactor(i, required)
+	if f == 1 {
+		return
+	}
+
+	// Raise the wicket probability and take the difference off everything else
+	// in proportion, so the result is still a distribution and the shape of the
+	// scoring outcomes is untouched.
+	w := dst[corpus.Wicket]
+	extra := w*f - w
+	rest := 1 - w
+	if rest <= 0 || extra <= 0 {
+		return
+	}
+	if w+extra >= 1 {
+		extra = 1 - w - 1e-9
+	}
+	scale := (rest - extra) / rest
+	for k := range dst {
+		if corpus.Outcome(k) == corpus.Wicket {
+			continue
+		}
+		dst[k] *= scale
+	}
+	dst[corpus.Wicket] = w + extra
+}
+
+// RequiredRate returns the rate the batting side still has to score at.
+func (s *State) RequiredRate() float64 {
+	if s.BallsLeft() <= 0 {
+		return ParRate
+	}
+	return 6 * float64(s.RunsNeeded()) / float64(s.BallsLeft())
 }
 
 // aggressionValue scores each outcome by how much it reflects going after the
@@ -96,7 +196,7 @@ var aggressionValue = []float64{
 	corpus.Three:  1.5,
 	corpus.Four:   2.0,
 	corpus.Six:    3.0,
-	corpus.Wicket: 2.0,
+	corpus.Wicket: 1.5,
 	corpus.Wide:   0,
 	corpus.NoBall: 0,
 }
@@ -149,10 +249,20 @@ type State struct {
 	// AttacksUsed counts high-intent overs spent.
 	AttacksUsed uint8
 
-	// LimitAttacks enforces the budget. It applies only when the player is
-	// batting: the budget is the chase half's puzzle, not a law of cricket, and
-	// the AI side in the defend half bats to whatever intent the situation
-	// calls for.
+	// LimitAttacks enforces the budget, in both halves.
+	//
+	// It used to apply only when the player was batting, on the reasoning that
+	// the budget is the chase half's puzzle rather than a law of cricket. That
+	// was a mistake, and rebalancing attacking exposed it: the AI side could
+	// attack in all twenty overs while the player had six tokens, so the two
+	// halves were not the same problem and their win rates were not comparable
+	// numbers. Defending against an opponent with unlimited aggression fell to
+	// a quarter of games while chasing sat above a half, and the puzzle
+	// generator, which requires both halves to be a contest, could not find a
+	// target that satisfied it at any score.
+	//
+	// The game's own description is "same score, other side". This makes that
+	// true.
 	LimitAttacks bool
 
 	Done bool
@@ -164,18 +274,16 @@ func (s *State) AttacksLeft() int { return MaxAttacks - int(s.AttacksUsed) }
 // ErrNoAttacksLeft is returned when the attack budget is exhausted.
 var ErrNoAttacksLeft = errors.New("sim: no high-intent overs left")
 
-// NewPlayerChase starts the chase half, where the player bats under the
-// attacking-over budget.
-func NewPlayerChase(p *Puzzle) *State {
-	s := NewChase(p)
-	s.LimitAttacks = true
-	return s
-}
+// NewPlayerChase starts the chase half, where the player bats.
+//
+// It is the same innings as the defend half, from the other chair.
+func NewPlayerChase(p *Puzzle) *State { return NewChase(p) }
 
-// NewChase starts an innings chasing the target, with no budget on intent.
-// This is the defend half, where the AI bats.
+// NewChase starts an innings chasing the target under the attacking-over
+// budget, whoever is batting.
 func NewChase(p *Puzzle) *State {
 	return &State{
+		LimitAttacks: true,
 		Puzzle:      p,
 		Striker:     0,
 		NonStriker:  1,
@@ -366,9 +474,14 @@ func PlayOver(s *State, key DailyKey, bowler int, intent Intent, p Predictor) (O
 		if err := p.Probabilities(st, base); err != nil {
 			return Over{}, fmt.Errorf("sim: predict: %w", err)
 		}
-		Tilt(base, aggressionValue, intent.lambda(), tilted)
+		ApplyIntent(base, intent, s.RequiredRate(), tilted)
 
-		u := Draw(key, Coord{Innings: 2, Over: s.Over, Delivery: deliveryIdx})
+		u := Draw(key, Coord{
+			Innings:  2,
+			Over:     s.Over,
+			Delivery: deliveryIdx,
+			Choice:   EncodeChoice(bowler, intent),
+		})
 		outcome := corpus.Outcome(Sample(tilted, u))
 
 		d := Delivery{
@@ -489,8 +602,9 @@ func (s *State) Result() Result {
 	return r
 }
 
-// TiltFor applies an intent's tilt to a base distribution. It is exported so
-// that the engine can evaluate what an intent would do without playing an over.
-func TiltFor(base []float64, intent Intent, dst []float64) {
-	Tilt(base, aggressionValue, intent.lambda(), dst)
+// TiltFor applies an intent to a base distribution at a given required rate. It
+// is exported so the engine can evaluate what an intent would do without
+// playing the over.
+func TiltFor(base []float64, intent Intent, required float64, dst []float64) {
+	ApplyIntent(base, intent, required, dst)
 }

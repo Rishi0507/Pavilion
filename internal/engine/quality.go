@@ -3,10 +3,10 @@ package engine
 import (
 	"math"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
-	"manhattan/internal/rates"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
+	"pavilion/internal/rates"
+	"pavilion/internal/sim"
 )
 
 // Restoring bowler quality that the outcome model smooths away.

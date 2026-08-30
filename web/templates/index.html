@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en" data-theme="board">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Pavilion · a daily cricket puzzle</title>
+<meta name="description" content="One target. Two innings. Three minutes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/pavilion.css">
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark">PAVILION</h1>
+  <p class="tagline">One target. Two innings.</p>
+  <p class="dateline" id="dateline">—</p>
+</header>
+
+<main id="app">
+
+  <!-- The landing page -->
+  <section id="screen-menu" hidden>
+
+    <div class="hero">
+      <div class="hero-art" data-ground-host aria-hidden="true"></div>
+
+      <div class="hero-body">
+        <h1 class="hero-mark">PAVILION</h1>
+        <p class="hero-line">One target. Two innings. Three minutes.</p>
+
+        <div class="hero-today">
+          <span class="label">TODAY&rsquo;S TARGET</span>
+          <span class="hero-target" id="menu-target">—</span>
+          <span class="hero-where" id="menu-where"></span>
+        </div>
+
+        <div class="modes">
+          <button class="mode" data-mode="daily">
+            <span class="mode-name">Today&rsquo;s puzzle</span>
+            <span class="mode-sub">The same one everybody gets. Counts towards the day&rsquo;s scores.</span>
+          </button>
+          <button class="mode" data-mode="practice">
+            <span class="mode-name">Practice</span>
+            <span class="mode-sub">A fresh situation each time. Play as many as you like.</span>
+          </button>
+          <button class="mode" data-mode="draft">
+            <span class="mode-name">Pick your XI</span>
+            <span class="mode-sub">Choose your own bowlers and batters, on a budget.</span>
+          </button>
+        </div>
+
+        <button class="link-button" id="btn-board">See today&rsquo;s leaderboard &rarr;</button>
+      </div>
+
+      <a class="hero-more" href="#how">How it works</a>
+    </div>
+
+    <div class="explainer" id="how">
+      <ol class="howto">
+        <li><b>A score is set.</b> One target, the same for everybody, chosen by
+            simulating the day thousands of times until it makes a contest.</li>
+        <li><b>You bowl first.</b> Five bowlers, four overs each. Every over you
+            choose who bowls. Stop them getting there.</li>
+        <li><b>Then you bat.</b> Same score, other side. Six attacking overs to
+            spend across twenty. Get there yourself.</li>
+      </ol>
+      <p class="prose subtle">
+        The catch is that your best bowler only has four overs, so using him
+        early means someone worse bowls at the end. You are scored on your
+        choices rather than your luck: every decision is compared against what
+        else was available, before the ball was bowled.
+      </p>
+    </div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section class="card" id="screen-board" hidden>
+    <h2 class="rule-heading">Today&rsquo;s leaderboard <span class="hint" id="board-date"></span></h2>
+    <p class="prose subtle">
+      A puzzle counts as solved only when both halves are won: the target held
+      and then chased down. Solved runs come first, and the decision score
+      separates them.
+    </p>
+    <ol class="board" id="board-rows"></ol>
+    <p class="empty" id="board-empty" hidden>
+      Nobody has put a name on the board yet today. Solve it and you will be first.
+    </p>
+    <button class="ghost" id="btn-board-back">Back</button>
+  </section>
+
+  <!-- Draft -->
+  <section class="card" id="screen-draft" hidden>
+    <h2 class="rule-heading">Pick your side</h2>
+    <p class="prose subtle">
+      Every player who has ever played enough of it, from any season. Each has a
+      price, and the budget will not stretch to five good bowlers, so something
+      has to give.
+    </p>
+
+    <div class="ground ground-slim" id="ground-draft">
+      <div class="ground-stage" data-ground-host></div>
+      <div class="ground-plate">
+        <span class="ground-name" id="draft-venue">—</span>
+        <span class="ground-city" id="draft-city"></span>
+        <span class="ground-dims" id="draft-dims"></span>
+      </div>
+      <div class="ground-target">
+        <span class="label">TARGET</span>
+        <span class="target-figure" id="draft-target">—</span>
+      </div>
+    </div>
+
+    <div class="budget-bar">
+      <div>
+        <span class="label">Bowlers</span>
+        <span class="figure" id="draft-bowl-count">0/5</span>
+        <span class="budget" id="draft-bowl-cost">0 / 55</span>
+      </div>
+      <div>
+        <span class="label">Batters</span>
+        <span class="figure" id="draft-bat-count">0/6</span>
+        <span class="budget" id="draft-bat-cost">0 / 66</span>
+      </div>
+    </div>
+
+    <h3 class="sub-heading">Bowlers <span class="hint" id="hint-bowlers">pick 5</span></h3>
+    <div class="filters" data-for="bowlers">
+      <input class="search" id="search-bowlers" type="search" placeholder="Search bowlers" autocomplete="off">
+      <div class="filter-row">
+        <label><span class="label">Team</span>
+          <select id="f-bowlers-team"><option value="">Any</option></select></label>
+        <label><span class="label">Type</span>
+          <select id="f-bowlers-style"><option value="">Any</option></select></label>
+        <label><span class="label">Era</span>
+          <select id="f-bowlers-era">
+            <option value="">Any</option>
+            <option value="now">Playing now</option>
+            <option value="past">Retired</option>
+          </select></label>
+        <label><span class="label">Max price</span>
+          <span class="range">
+            <input id="f-bowlers-cost" type="range" min="3" max="20" value="20">
+            <output id="f-bowlers-cost-out">20</output>
+          </span></label>
+        <label><span class="label">Sort</span>
+          <select id="f-bowlers-sort">
+            <option value="cost">Price</option>
+            <option value="rating">Rating</option>
+            <option value="name">Name</option>
+          </select></label>
+        <button type="button" class="link-button" id="f-bowlers-clear">Clear</button>
+      </div>
+      <p class="filter-count" id="count-bowlers"></p>
+    </div>
+    <div class="picks" id="draft-bowlers"></div>
+
+    <h3 class="sub-heading">Batters <span class="hint" id="hint-batters">pick 6</span></h3>
+    <div class="filters" data-for="batters">
+      <input class="search" id="search-batters" type="search" placeholder="Search batters" autocomplete="off">
+      <div class="filter-row">
+        <label><span class="label">Team</span>
+          <select id="f-batters-team"><option value="">Any</option></select></label>
+        <label><span class="label">Hand</span>
+          <select id="f-batters-style"><option value="">Any</option></select></label>
+        <label><span class="label">Era</span>
+          <select id="f-batters-era">
+            <option value="">Any</option>
+            <option value="now">Playing now</option>
+            <option value="past">Retired</option>
+          </select></label>
+        <label><span class="label">Max price</span>
+          <span class="range">
+            <input id="f-batters-cost" type="range" min="3" max="20" value="20">
+            <output id="f-batters-cost-out">20</output>
+          </span></label>
+        <label><span class="label">Sort</span>
+          <select id="f-batters-sort">
+            <option value="cost">Price</option>
+            <option value="rating">Rating</option>
+            <option value="name">Name</option>
+          </select></label>
+        <button type="button" class="link-button" id="f-batters-clear">Clear</button>
+      </div>
+      <p class="filter-count" id="count-batters"></p>
+    </div>
+    <div class="picks" id="draft-batters"></div>
+
+    <p class="draft-note" id="draft-note"></p>
+    <button class="primary" id="btn-draft-start" disabled>Start</button>
+    <button class="ghost" id="btn-draft-back">Back</button>
+  </section>
+
+  <!-- Start -->
+  <section class="card" id="screen-start" hidden>
+    <p class="mode-tag" id="start-mode">—</p>
+
+    <div class="ground" id="ground-start">
+      <div class="ground-stage" data-ground-host></div>
+      <div class="ground-plate">
+        <span class="ground-name" id="start-venue">—</span>
+        <span class="ground-city" id="start-city"></span>
+        <span class="ground-dims" id="start-dims"></span>
+      </div>
+      <div class="ground-target">
+        <span class="label">TARGET</span>
+        <span class="target-figure" id="start-target">—</span>
+      </div>
+    </div>
+
+    <p class="ground-note" id="start-ground-note"></p>
+
+    <p class="prose">
+      You are <b>bowling first</b>. They need <span id="start-need">—</span> to
+      win. Choose a bowler for every over.
+    </p>
+
+    <h2 class="rule-heading">Your attack</h2>
+    <ul class="attack-list" id="start-attack"></ul>
+
+    <p class="unvalidated" id="start-unvalidated" hidden>
+      This one has not been balance-checked, so it may be lopsided.
+    </p>
+
+    <button class="primary" id="btn-start">Start bowling</button>
+    <button class="ghost" id="btn-start-back">Back</button>
+  </section>
+
+  <!-- Play -->
+  <section id="screen-play" hidden>
+
+    <!-- The board: everything you read. On a wide screen it parks itself
+         beside the choices and stays put, so the score does not scroll away
+         the moment you go to pick a bowler. -->
+    <div class="play-side">
+    <p class="phase-banner" id="phase-banner">YOU ARE BOWLING · stop them reaching the target</p>
+
+    <div class="scoreboard" id="scoreboard-wrap">
+      <div class="sb-main">
+        <span class="sb-score" id="sb-score">0</span><span class="sb-sep">/</span><span class="sb-wkts" id="sb-wkts">0</span>
+      </div>
+      <div class="sb-need">
+        <span class="label" id="sb-need-label">NEED</span>
+        <span id="sb-need">—</span>
+      </div>
+      <div class="sb-wp">
+        <span class="label" id="sb-wp-label">DEFENDING</span>
+        <span class="sb-wp-figure" id="sb-wp">—</span>
+      </div>
+      <div class="sb-meter" aria-hidden="true"><span id="sb-meter-fill"></span></div>
+    </div>
+
+    <!-- The Manhattan: a bar for every over, which is the chart this project
+         is named after and the one every scorecard in the sport draws. -->
+    <div class="charts">
+      <figure class="manhattan" id="mh-defend-wrap">
+        <figcaption><span class="mh-side">THEY BATTED</span><span class="mh-total" id="mh-defend-total"></span></figcaption>
+        <div class="mh-plot" id="mh-defend" aria-label="Bowling innings, runs per over"></div>
+      </figure>
+      <figure class="manhattan" id="mh-chase-wrap" hidden>
+        <figcaption><span class="mh-side">YOU BATTED</span><span class="mh-total" id="mh-chase-total"></span></figcaption>
+        <div class="mh-plot" id="mh-chase" aria-label="Batting innings, runs per over"></div>
+      </figure>
+      <p class="mh-key">
+        bar height is runs &middot; <b class="k-good">green</b> helped you &middot;
+        <b class="k-bad">red</b> hurt &middot; a notch is a wicket
+      </p>
+    </div>
+
+    <!-- The batting order, all eleven. Who is still to come is part of the
+         decision, and the crease alone never showed it. -->
+    <div class="squad" id="squad">
+      <h3 class="squad-head"><span id="squad-title">BATTING</span><span class="squad-sub" id="squad-sub"></span></h3>
+      <ol class="order" id="order"></ol>
+    </div>
+
+    <!-- The bowling card, which is the thing a scorer would actually keep. -->
+    <table class="bowling" id="bowling-card" hidden>
+      <caption>BOWLING</caption>
+      <thead>
+        <tr><th scope="col">Bowler</th><th scope="col">O</th><th scope="col">R</th><th scope="col">W</th><th scope="col">Econ</th></tr>
+      </thead>
+      <tbody id="bowling-rows"></tbody>
+    </table>
+
+    </div>
+
+    <!-- The choices: everything you do. -->
+    <div class="play-main">
+    <div class="over-head">
+      <span class="over-no" id="over-no">OVER 1 <span class="of-twenty">of 20</span></span>
+    </div>
+
+    <div class="crease" id="crease">
+      <div class="bat" id="bat-striker">
+        <span class="mark" id="mark-striker">—</span>
+        <span class="bat-who">
+          <span class="bat-name" id="name-striker">—</span>
+          <span class="bat-team" id="team-striker"></span>
+        </span>
+        <span class="bat-figs" id="figs-striker">—</span>
+        <span class="on-strike">on strike</span>
+      </div>
+      <div class="bat" id="bat-nonstriker">
+        <span class="mark" id="mark-nonstriker">—</span>
+        <span class="bat-who">
+          <span class="bat-name" id="name-nonstriker">—</span>
+          <span class="bat-team" id="team-nonstriker"></span>
+        </span>
+        <span class="bat-figs" id="figs-nonstriker">—</span>
+      </div>
+    </div>
+
+    <div class="balls" id="balls" aria-live="polite"></div>
+
+    <div id="controls-defend">
+      <h2 class="rule-heading">Who bowls this over? <span class="hint">keys 1&ndash;5</span></h2>
+      <div class="bowlers" id="bowlers"></div>
+    </div>
+
+    <div id="controls-chase" hidden>
+      <h2 class="rule-heading">
+        How do you play this over? <span class="hint">keys 1&ndash;3</span>
+        <span class="tokens" id="tokens" aria-label="attacking overs left"></span>
+      </h2>
+      <div class="intents">
+        <button class="intent" data-intent="block"><span class="intent-name">Block</span><span class="intent-sub">safe, few runs</span></button>
+        <button class="intent" data-intent="rotate"><span class="intent-name">Rotate</span><span class="intent-sub">steady, the default</span></button>
+        <button class="intent" data-intent="attack" id="intent-attack"><span class="intent-name">Attack</span><span class="intent-sub">more runs, more risk</span></button>
+      </div>
+    </div>
+
+    <p class="handover" id="handover" hidden></p>
+    </div>
+  </section>
+
+  <!-- Result -->
+  <section class="card" id="screen-result" hidden>
+    <h2 class="result-verdict" id="result-verdict">—</h2>
+
+    <!-- The two halves, side by side, because the game is two halves and the
+         result was previously only a sentence. -->
+    <div class="halves">
+      <div class="half" id="half-defend">
+        <span class="half-label">DEFENDING</span>
+        <span class="half-mark" id="half-defend-mark">—</span>
+        <span class="half-line" id="half-defend-line"></span>
+      </div>
+      <div class="half" id="half-chase">
+        <span class="half-label">CHASING</span>
+        <span class="half-mark" id="half-chase-mark">—</span>
+        <span class="half-line" id="half-chase-line"></span>
+      </div>
+    </div>
+
+    <div class="charts" id="result-charts">
+      <figure class="manhattan">
+        <figcaption><span class="mh-side">THEY BATTED</span><span class="mh-total" id="mh-r-defend-total"></span></figcaption>
+        <div class="mh-plot" id="mh-r-defend"></div>
+      </figure>
+      <figure class="manhattan">
+        <figcaption><span class="mh-side">YOU BATTED</span><span class="mh-total" id="mh-r-chase-total"></span></figcaption>
+        <div class="mh-plot" id="mh-r-chase"></div>
+      </figure>
+    </div>
+
+    <div class="verdict-figure">
+      <span class="label">DECISION SCORE</span>
+      <span class="big-figure" id="result-score">—</span>
+      <p class="prose subtle" id="score-explain">
+        This rates your choices, not your luck. It compares what you picked
+        against what else was available, before the ball was bowled &mdash; so a
+        good score and a loss can happen on the same day.
+      </p>
+    </div>
+
+    <!-- Asked for only when the puzzle is actually solved, which is both
+         halves won, because that is what the board is for. -->
+    <form class="claim" id="claim" hidden>
+      <p class="claim-head">You solved it. Put your name on the board.</p>
+      <div class="claim-row">
+        <input class="search" id="claim-name" type="text" maxlength="24"
+               placeholder="Your name" autocomplete="nickname" required>
+        <button class="primary" type="submit" id="btn-claim">Add</button>
+      </div>
+      <p class="claim-note" id="claim-note"></p>
+    </form>
+
+    <div class="result-figures">
+      <div><span class="label">PERCENTILE</span><span class="figure" id="result-pct">—</span></div>
+      <div><span class="label">STREAK</span><span class="figure" id="result-streak">—</span></div>
+    </div>
+
+    <p class="prose" id="result-day"></p>
+
+    <h3 class="rule-heading">Share</h3>
+    <pre class="share" id="share">—</pre>
+
+    <div class="result-actions">
+      <button class="primary" id="btn-copy">Copy result</button>
+      <button class="ghost" id="btn-new">Play a different situation</button>
+      <button class="ghost" id="btn-same">Play this one again</button>
+      <button class="ghost" id="btn-menu">Back to the menu</button>
+    </div>
+  </section>
+
+  <p class="error" id="error" hidden></p>
+</main>
+
+<footer class="colophon">
+  <p>
+    Ball-by-ball data from <a href="https://cricsheet.org">Cricsheet</a>, by Stephen Rushe,
+    under ODC-BY 1.0. Player attributes from Wikipedia, under CC BY-SA 4.0.
+  </p>
+  <p>
+    An unofficial fan project. Not affiliated with, endorsed by or connected to
+    the BCCI, the IPL or any franchise. Sides are referred to by city.
+  </p>
+</footer>
+
+<script src="/static/pavilion.js" defer></script>
+</body>
+</html>
