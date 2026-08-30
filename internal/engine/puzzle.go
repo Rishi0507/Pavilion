@@ -46,11 +46,7 @@ func (e *Engine) BuildPuzzle(date string, key sim.DailyKey, target uint16) (*sim
 	}
 
 	batting := pick.choose(batPool, 11)
-	// Order by how much they have batted, which approximates a real top order.
-	vols := e.store.Volumes()
-	sort.Slice(batting, func(i, j int) bool {
-		return vols[batting[i]].BallsFaced > vols[batting[j]].BallsFaced
-	})
+	e.orderBatting(batting)
 	for _, id := range batting {
 		p.Batting = append(p.Batting, e.player(id))
 	}
@@ -285,11 +281,57 @@ func (e *Engine) FromQueued(date string, target uint16, venue corpus.VenueID,
 		}
 		p.Attack = append(p.Attack, e.player(corpus.PlayerID(id)))
 	}
+	order := make([]corpus.PlayerID, 0, len(battingIDs))
 	for _, id := range battingIDs {
 		if int(id) >= len(e.store.Players) {
 			return nil, fmt.Errorf("engine: queued batter id %d is not in the corpus", id)
 		}
-		p.Batting = append(p.Batting, e.player(corpus.PlayerID(id)))
+		order = append(order, corpus.PlayerID(id))
+	}
+	e.orderBatting(order)
+	for _, id := range order {
+		p.Batting = append(p.Batting, e.player(id))
 	}
 	return p, nil
+}
+
+// orderBatting puts a side in the order it would really bat.
+//
+// The previous rule sorted by career balls faced, on the reasoning that the
+// players who have batted most are the top order. That is wrong: balls faced
+// measures how long somebody has played, not where they bat. Ravindra Jadeja
+// has faced more deliveries than most openers and comes in at six or seven, so
+// sides were opening with him and sending a specialist opener in at eight.
+//
+// Each player's real position is reconstructed from the corpus by looking at
+// the order they came to the crease, averaged over their career. Somebody with
+// too little history to place is put in the middle order rather than at either
+// end, which is where an unknown quantity actually bats.
+func (e *Engine) orderBatting(ids []corpus.PlayerID) {
+	pos := e.battingPositions()
+	const unknown = 6.0
+	const minInnings = 8
+
+	at := func(id corpus.PlayerID) float64 {
+		if int(id) >= len(pos) || pos[id].Innings < minInnings {
+			return unknown
+		}
+		return pos[id].Mean
+	}
+
+	sort.SliceStable(ids, func(i, j int) bool {
+		a, b := at(ids[i]), at(ids[j])
+		if a != b {
+			return a < b
+		}
+		// A stable tiebreak, so the same side always bats in the same order.
+		return ids[i] < ids[j]
+	})
+}
+
+// battingPositions is computed once; it needs a full scan of the corpus and
+// never changes.
+func (e *Engine) battingPositions() []corpus.BattingPosition {
+	e.posOnce.Do(func() { e.positions = e.store.BattingPositions() })
+	return e.positions
 }

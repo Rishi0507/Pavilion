@@ -56,10 +56,44 @@ func DeriveDailyKey(masterSecret []byte, dateIST string) (DailyKey, error) {
 // not just legal ones. Using the legal-ball index would give two different
 // deliveries the same coordinate whenever an over contained an extra, and they
 // would then share a draw.
+//
+// Choice is the decision taken for this over: which bowler, and with what
+// intent. It belongs in the coordinate, and leaving it out was a real flaw.
+//
+// The original scheme drew one number per ball from the coordinate alone and
+// let the decision change only the distribution that number was read against.
+// That sounds right and plays badly. A wicket occupies three to eight percent
+// of the distribution, and swapping bowlers moves that boundary by a point or
+// two, so a ball whose draw landed in the wicket bucket stayed a wicket almost
+// whatever the player did. Measured across four very different bowling
+// policies, the first nine overs produced an identical pattern of wickets.
+// Players correctly read that as scripted.
+//
+// Including the choice keeps every property the scheme exists for:
+//
+//   - Two players who make the same decisions still see exactly the same match,
+//     because the same coordinate and the same choice give the same number.
+//   - The luck in the seventeenth over still cannot depend on what was done in
+//     the fifth, because a draw depends on its own over's decision and nothing
+//     earlier.
+//   - It is still a keyed function rather than a sequential stream, so nothing
+//     desynchronises and there is no generator to advance.
+//
+// What changes is that a different bowler now genuinely bowls a different ball
+// rather than the same ball measured against a slightly different ruler.
 type Coord struct {
 	Innings  uint8
 	Over     uint8
 	Delivery uint8
+
+	// Choice encodes the decision for this over: the bowler index in the low
+	// nibble and the intent in the high nibble.
+	Choice uint8
+}
+
+// EncodeChoice packs an over's decision into the coordinate.
+func EncodeChoice(bowler int, intent Intent) uint8 {
+	return uint8(bowler&0x0F) | uint8(int(intent)&0x0F)<<4
 }
 
 // Draw returns the uniform in [0,1) for one delivery.
@@ -77,10 +111,11 @@ func Draw(key DailyKey, c Coord) float64 {
 	// The coordinate is mixed into the tail of the seed. The first 28 bytes
 	// stay the day's key, so two coordinates differ in the seed regardless of
 	// how similar the situations are.
+	seed[27] ^= c.Choice
 	seed[28] ^= c.Innings
 	seed[29] ^= c.Over
 	seed[30] ^= c.Delivery
-	seed[31] ^= c.Innings*37 + c.Over*11 + c.Delivery
+	seed[31] ^= c.Innings*37 + c.Over*11 + c.Delivery*7 + c.Choice*61
 
 	r := rand.NewChaCha8(seed)
 	// Take 53 bits, the width of a float64 mantissa, so the mapping onto [0,1)

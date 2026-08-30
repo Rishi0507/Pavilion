@@ -255,3 +255,68 @@ func (s *Store) Careers() [][]Spell {
 	}
 	return out
 }
+
+// BattingPosition is where a player actually bats.
+type BattingPosition struct {
+	Mean    float64 // average position across innings
+	Innings int     // how many innings that average is over
+}
+
+// BattingPositions computes each player's typical place in the order.
+//
+// Cricsheet does not record a batting position, so it is reconstructed: within
+// an innings, the order in which batters first face a ball is the order they
+// came in, which is the batting order. Averaging that across a career gives a
+// number that separates an opener from a number eight.
+//
+// This exists because the obvious proxy is wrong. Sorting a side by career balls
+// faced looks like it should approximate a top order and does not: it measures
+// how long somebody has played, not where. Ravindra Jadeja has faced more balls
+// than most openers and bats at seven, so a side ordered that way opened with
+// him and sent a specialist opener in at eight.
+func (s *Store) BattingPositions() []BattingPosition {
+	type seen struct {
+		inn   InningsID
+		order int
+	}
+
+	first := make(map[PlayerID]seen, len(s.Players))
+	sum := make([]float64, len(s.Players))
+	count := make([]int, len(s.Players))
+
+	var current InningsID = ^InningsID(0)
+	next := 0
+
+	for i := range s.D.Innings {
+		inn := s.D.Innings[i]
+		if s.Inn.SuperOver[inn] {
+			continue
+		}
+		if inn != current {
+			current, next = inn, 0
+		}
+
+		// Both ends are recorded, because the openers arrive together and only
+		// one of them faces the first ball.
+		for _, p := range [2]PlayerID{s.D.Batter[i], s.D.NonStriker[i]} {
+			if p == NoPlayer {
+				continue
+			}
+			if got, ok := first[p]; ok && got.inn == inn {
+				continue
+			}
+			next++
+			first[p] = seen{inn: inn, order: next}
+			sum[p] += float64(next)
+			count[p]++
+		}
+	}
+
+	out := make([]BattingPosition, len(s.Players))
+	for p := range out {
+		if count[p] > 0 {
+			out[p] = BattingPosition{Mean: sum[p] / float64(count[p]), Innings: count[p]}
+		}
+	}
+	return out
+}

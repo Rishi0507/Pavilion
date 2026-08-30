@@ -1,6 +1,10 @@
 package engine
 
-import "testing"
+import (
+	"testing"
+
+	"pavilion/internal/corpus"
+)
 
 // Every venue string in the corpus must resolve to a described ground.
 //
@@ -160,5 +164,59 @@ func TestCareerLabels(t *testing.T) {
 		if !found[name] {
 			t.Logf("%s is not in the dealable set; label not checked", name)
 		}
+	}
+}
+
+// A side has to bat in the order it would really bat.
+//
+// The first rule sorted by career balls faced, on the reasoning that whoever has
+// batted most is the top order. That measures how long somebody has played
+// rather than where, so sides opened with Jadeja and sent a specialist opener in
+// at eight.
+func TestBattingOrderIsRealistic(t *testing.T) {
+	e := testEngine(t)
+	pos := e.battingPositions()
+
+	byName := map[string]corpus.PlayerID{}
+	for id, p := range e.store.Players {
+		byName[p.Name] = corpus.PlayerID(id)
+	}
+
+	// Reconstructed positions should place well known players correctly.
+	for _, tc := range []struct {
+		name   string
+		lo, hi float64
+	}{
+		{"PP Shaw", 1.0, 2.0},
+		{"DA Warner", 1.0, 2.5},
+		{"V Kohli", 1.5, 3.5},
+		{"MS Dhoni", 4.5, 6.5},
+		{"RA Jadeja", 5.0, 7.5},
+		{"JJ Bumrah", 8.5, 11.0},
+	} {
+		id, ok := byName[tc.name]
+		if !ok {
+			t.Logf("%s is not in the corpus; skipped", tc.name)
+			continue
+		}
+		got := pos[id].Mean
+		if got < tc.lo || got > tc.hi {
+			t.Errorf("%s reconstructs to position %.2f, expected between %.1f and %.1f",
+				tc.name, got, tc.lo, tc.hi)
+		}
+	}
+
+	// An assembled side must come out in ascending order of position, and an
+	// opener must never be sent in behind an all rounder.
+	opener, hasOpener := byName["PP Shaw"]
+	finisher, hasFinisher := byName["RA Jadeja"]
+	if !hasOpener || !hasFinisher {
+		t.Skip("the players this checks are not in the corpus")
+	}
+
+	side := []corpus.PlayerID{finisher, opener}
+	e.orderBatting(side)
+	if side[0] != opener {
+		t.Error("an all rounder was sent in ahead of a specialist opener")
 	}
 }

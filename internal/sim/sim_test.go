@@ -172,53 +172,79 @@ func TestLuckIsFixedByCoordinate(t *testing.T) {
 	}
 }
 
-// TestDecisionOrderDoesNotChangeLuck plays the same set of overs in different
-// orders and checks that each over's draws depend on the over number alone.
-func TestDecisionOrderDoesNotChangeLuck(t *testing.T) {
+// The luck in a given over must not depend on anything done in an earlier one.
+//
+// This is the property the coordinate scheme exists for, and it is what keeps
+// "unlucky" and "wrong" distinguishable: a player cannot be punished in the
+// seventeenth over for a choice made in the fifth, so a score reflects the
+// choices rather than an accumulated dice history.
+//
+// It is deliberately weaker than the property this used to assert, which was
+// that an over's luck did not depend on that over's own decision either. That
+// version played badly. A wicket occupies a few percent of the distribution and
+// swapping bowlers moves the boundary by a point or two, so a draw that landed
+// in the wicket bucket stayed a wicket almost regardless of the choice, and the
+// first nine overs came out identical under four very different bowling
+// policies. Players read that as scripted, and were right to.
+func TestEarlierDecisionsDoNotChangeLaterLuck(t *testing.T) {
 	key := testKey(t)
-
-	// A fixed distribution means the outcome depends only on the draw, so any
-	// difference between orderings would be the draw moving.
 	p := fixedPredictor{p: []float64{0.3, 0.35, 0.06, 0.004, 0.12, 0.06, 0.05, 0.05, 0.006}}
 
-	a, _ := playAll(t, key, []int{0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 1, 2, 3, 4}, p)
-	b, _ := playAll(t, key, []int{4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0, 4, 3, 2, 1, 0}, p)
+	// Two orders differing only in the first ten overs. From over eleven both
+	// bowl an identical sequence, so from there the two matches must agree.
+	head := []int{0, 1, 2, 3, 4, 0, 1, 2, 3, 4}
+	alt := []int{4, 3, 2, 1, 0, 4, 3, 2, 1, 0}
+	// Starts with bowler 2, so it follows either opening without asking anyone
+	// to bowl consecutive overs. Each bowler ends on exactly four.
+	tail := []int{2, 3, 4, 0, 1, 2, 3, 4, 0, 1}
 
-	if len(a) != len(b) {
-		t.Fatalf("different over counts: %d and %d", len(a), len(b))
-	}
-	for i := range a {
-		if len(a[i].Deliveries) != len(b[i].Deliveries) {
-			t.Fatalf("over %d: %d deliveries one way, %d the other", i, len(a[i].Deliveries), len(b[i].Deliveries))
+	a, _ := playAll(t, key, append(append([]int{}, head...), tail...), p)
+	b, _ := playAll(t, key, append(append([]int{}, alt...), tail...), p)
+
+	checked := 0
+	for i := 10; i < min(len(a), len(b)); i++ {
+		if a[i].Bowler.ID != b[i].Bowler.ID {
+			t.Fatalf("over %d: the two runs did not converge on the same bowler", i)
 		}
-		for j := range a[i].Deliveries {
-			if a[i].Deliveries[j].Outcome != b[i].Deliveries[j].Outcome {
-				t.Errorf("over %d ball %d: %v under one bowling order, %v under another",
-					i, j, a[i].Deliveries[j].Outcome, b[i].Deliveries[j].Outcome)
+		for j := range min(len(a[i].Deliveries), len(b[i].Deliveries)) {
+			checked++
+			if got, want := b[i].Deliveries[j].Outcome, a[i].Deliveries[j].Outcome; got != want {
+				t.Errorf("over %d ball %d: %v after one opening, %v after another; "+
+					"luck leaked from an earlier decision", i, j, got, want)
 			}
 		}
+	}
+	if checked == 0 {
+		t.Fatal("the two runs shared no overs, so nothing was compared")
 	}
 }
 
-// TestShuffledDecisionOrders is the property test the quality bar calls for:
-// across many random legal bowling orders, every over's luck stays put.
-func TestShuffledDecisionOrders(t *testing.T) {
+// A different choice has to produce a genuinely different ball.
+//
+// Without this the game is scripted: the same wickets fall at the same moments
+// whatever the player does, and the decision the entire game is about has no
+// visible consequence.
+func TestADifferentChoiceChangesTheBall(t *testing.T) {
 	key := testKey(t)
-	p := fixedPredictor{p: []float64{0.3, 0.35, 0.06, 0.004, 0.12, 0.06, 0.05, 0.05, 0.006}}
-	r := rand.New(rand.NewPCG(11, 22))
 
-	reference, _ := playAll(t, key, legalOrder(), p)
-
-	for trial := range 200 {
-		order := shuffledLegalOrder(r)
-		got, _ := playAll(t, key, order, p)
-		for i := range min(len(got), len(reference)) {
-			for j := range min(len(got[i].Deliveries), len(reference[i].Deliveries)) {
-				if got[i].Deliveries[j].Outcome != reference[i].Deliveries[j].Outcome {
-					t.Fatalf("trial %d order %v: over %d ball %d differs", trial, order, i, j)
-				}
+	same := 0
+	for over := range uint8(20) {
+		base := Draw(key, Coord{Innings: 2, Over: over, Delivery: 0, Choice: EncodeChoice(0, Rotate)})
+		for bowler := 1; bowler < 5; bowler++ {
+			other := Draw(key, Coord{Innings: 2, Over: over, Delivery: 0, Choice: EncodeChoice(bowler, Rotate)})
+			if other == base {
+				same++
 			}
 		}
+	}
+	if same != 0 {
+		t.Errorf("%d of 80 bowler swaps left the draw unchanged", same)
+	}
+
+	// Intent has to matter too, or the batting half is scripted the same way.
+	if a, b := Draw(key, Coord{Innings: 2, Over: 3, Delivery: 2, Choice: EncodeChoice(1, Block)}),
+		Draw(key, Coord{Innings: 2, Over: 3, Delivery: 2, Choice: EncodeChoice(1, Attack)}); a == b {
+		t.Error("blocking and attacking an over drew the same number")
 	}
 }
 

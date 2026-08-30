@@ -10,15 +10,16 @@ components and flows, see [system-architecture.md](system-architecture.md).
 1. [The corpus](#1-the-corpus)
 2. [Player attributes](#2-player-attributes)
 3. [Shrunk rates](#3-shrunk-rates)
-4. [The matchup graph](#4-the-matchup-graph)
-5. [Features and leakage](#5-features-and-leakage)
-6. [The models](#6-the-models)
-7. [Determinism](#7-determinism)
-8. [The simulator](#8-the-simulator)
-9. [Intent and balance](#9-intent-and-balance)
-10. [Puzzle generation](#10-puzzle-generation)
-11. [Decision scoring](#11-decision-scoring)
-12. [The client](#12-the-client)
+4. [Batting order](#3a-batting-order)
+5. [The matchup graph](#4-the-matchup-graph)
+6. [Features and leakage](#5-features-and-leakage)
+7. [The models](#6-the-models)
+8. [Determinism](#7-determinism)
+9. [The simulator](#8-the-simulator)
+10. [Intent and balance](#9-intent-and-balance)
+11. [Puzzle generation](#10-puzzle-generation)
+12. [Decision scoring](#11-decision-scoring)
+13. [The client](#12-the-client)
 
 ---
 
@@ -130,6 +131,35 @@ how much to trust each one.
 
 ---
 
+## 3a. Batting order
+
+Cricsheet does not record a batting position, so it is reconstructed: within an
+innings, the order in which batters first come to the crease is the batting
+order, and averaging that across a career places a player.
+
+The obvious proxy is wrong and was used at first. Sorting a side by career balls
+faced looks like it should approximate a top order and does not, because it
+measures how long somebody has played rather than where they bat. Ravindra
+Jadeja has faced more deliveries than most openers and comes in at six, so sides
+opened with him and sent a specialist opener in at eight.
+
+Reconstructed means, which match reality closely:
+
+| Player | Mean position |
+| --- | --- |
+| PP Shaw | 1.08 |
+| DA Warner | 1.57 |
+| V Kohli | 2.53 |
+| MS Dhoni | 5.31 |
+| RA Jadeja | 5.90 |
+| R Ashwin | 7.17 |
+| JJ Bumrah | 10.27 |
+
+A player with fewer than eight innings is placed in the middle order rather than
+at either end, which is where an unknown quantity actually bats.
+
+---
+
 ## 4. The matchup graph
 
 Head to head history is stored as a compressed sparse row structure in both
@@ -215,23 +245,47 @@ number is then derived from that key and the ball's **coordinate**, not from a
 sequential stream:
 
 ```
-coordinate = (innings, over, delivery)
+coordinate = (innings, over, delivery, choice)
 draw       = ChaCha8(key, coordinate)
 ```
+
+The choice, meaning which bowler and with what intent, is part of the
+coordinate. Leaving it out was a real defect and is worth recording.
+
+The original scheme drew one number per ball from the coordinate alone and let
+the decision change only the distribution that number was read against. That is
+the textbook common random numbers construction and it plays badly here. A
+wicket occupies three to eight percent of the distribution, and swapping bowlers
+moves that boundary by a point or two, so a draw that landed inside the wicket
+bucket stayed a wicket almost regardless of what the player did. Measured across
+four very different bowling policies, the first nine overs produced an identical
+pattern of wickets. Players read the game as scripted, and were right to.
+
+Including the choice keeps every property the scheme exists for:
+
+- Two players who make the same decisions still see exactly the same match.
+- The luck in the seventeenth over still cannot depend on anything done in the
+  fifth, because a draw depends on its own over's decision and nothing earlier.
+- It is still a keyed function rather than a sequential stream, so nothing
+  desynchronises and there is no generator position to advance.
+
+What changes is that a different bowler now genuinely bowls a different ball,
+rather than the same ball measured against a slightly different ruler.
 
 ```mermaid
 flowchart LR
   SECRET[Master secret] --> HKDF[HKDF with the date]
   HKDF --> DAYKEY[Day key]
-  DAYKEY --> COORD["Coordinate<br/>innings, over, ball"]
+  DAYKEY --> COORD["Coordinate<br/>innings, over, ball, choice"]
   COORD --> RNG[ChaCha8 stream<br/>seeded per coordinate]
   RNG --> U[Uniform draw]
   U --> SAMPLE[Sample the shifted<br/>outcome distribution]
 ```
 
-The consequence is that ball four of over twelve carries the same number whether
-it is reached or not, and whatever happened earlier. Choices change the
-distribution that the number is read against, never the number.
+The consequence is that ball four of over twelve carries the same number
+whenever it is reached with the same decision, whatever happened earlier in the
+innings. Replaying cannot improve an outcome, and no accumulated dice history
+follows a player through a match.
 
 The two halves of a day must not share luck, or a player would meet the same
 deliveries twice, so the chase half flips one byte of the key.

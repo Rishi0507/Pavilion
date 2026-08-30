@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"sync"
 
 	"pavilion/internal/attr"
 	"pavilion/internal/corpus"
@@ -40,6 +41,9 @@ type Engine struct {
 	years []string
 
 	recentVenues []corpus.VenueID
+
+	posOnce   sync.Once
+	positions []corpus.BattingPosition
 }
 
 // Paths locates every artifact the engine needs.

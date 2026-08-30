@@ -476,7 +476,12 @@ func PlayOver(s *State, key DailyKey, bowler int, intent Intent, p Predictor) (O
 		}
 		ApplyIntent(base, intent, s.RequiredRate(), tilted)
 
-		u := Draw(key, Coord{Innings: 2, Over: s.Over, Delivery: deliveryIdx})
+		u := Draw(key, Coord{
+			Innings:  2,
+			Over:     s.Over,
+			Delivery: deliveryIdx,
+			Choice:   EncodeChoice(bowler, intent),
+		})
 		outcome := corpus.Outcome(Sample(tilted, u))
 
 		d := Delivery{
