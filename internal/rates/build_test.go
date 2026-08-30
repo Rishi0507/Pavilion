@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
 )
 
 func TestCellIndexRoundTrip(t *testing.T) {

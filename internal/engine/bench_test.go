@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/sim"
 )
 
 func testEngine(tb testing.TB) *Engine {

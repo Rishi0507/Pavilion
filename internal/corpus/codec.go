@@ -262,7 +262,7 @@ func Decode(b []byte) (*Store, error) {
 		return nil, fmt.Errorf("%w: bad magic", ErrBadFormat)
 	}
 	if v := d.u32(); v != formatVersion {
-		return nil, fmt.Errorf("corpus: format version %d, want %d (regenerate with paretl)", v, formatVersion)
+		return nil, fmt.Errorf("corpus: format version %d, want %d (regenerate with pavetl)", v, formatVersion)
 	}
 
 	s := &Store{}

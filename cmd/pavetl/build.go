@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
 )
 
 // builder accumulates the corpus and the quality report in a single pass over
@@ -35,7 +35,7 @@ type builder struct {
 	cricinfoID map[string]string
 	registerNm map[string]string
 
-	// The attribute table, when one has been built. Nil until parattr has run.
+	// The attribute table, when one has been built. Nil until pavattr has run.
 	attrs attr.Table
 }
 
@@ -596,7 +596,7 @@ func (b *builder) attributeCoverage() {
 	if b.attrs == nil {
 		b.q.Coverage["player.batting_hand"] = 0
 		b.q.Coverage["player.bowling_class"] = 0
-		b.q.warn("no attribute table found; run parattr. Batting handedness and " +
+		b.q.warn("no attribute table found; run pavattr. Batting handedness and " +
 			"bowling type are absent from Cricsheet, and the matchup model " +
 			"cannot be trained without them")
 		return

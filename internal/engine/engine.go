@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"sort"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
-	"manhattan/internal/graph"
-	"manhattan/internal/model"
-	"manhattan/internal/rates"
-	"manhattan/internal/sim"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
+	"pavilion/internal/graph"
+	"pavilion/internal/model"
+	"pavilion/internal/rates"
+	"pavilion/internal/sim"
 )
 
 // Engine holds everything loaded at boot. It is read-only once built, so it is
@@ -75,7 +75,7 @@ func New(p Paths) (*Engine, error) {
 		return nil, err
 	}
 	if len(attrs) == 0 {
-		return nil, fmt.Errorf("engine: no attribute table at %s; run parattr", p.Attributes)
+		return nil, fmt.Errorf("engine: no attribute table at %s; run pavattr", p.Attributes)
 	}
 	out, err := model.Load(p.Model, p.ModelMeta, features.Names)
 	if err != nil {

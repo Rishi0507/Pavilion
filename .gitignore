@@ -39,3 +39,10 @@ ml/.venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Local configuration. The server reads its master secret from the
+# environment, and that secret must never be committed: with it, every ball
+# of every day could be computed before a single decision was made.
+.env
+.env.local
+.env.*.local

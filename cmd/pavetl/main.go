@@ -1,4 +1,4 @@
-// Command paretl converts the raw Cricsheet IPL archive into Manhattan's
+// Command pavetl converts the raw Cricsheet IPL archive into Manhattan's
 // binary corpus, and emits a data quality report alongside it.
 //
 // The corpus is the single source of truth for every model and for the match
@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
 )
 
 // sourceLicense credits both upstream sources. They carry different terms, and
@@ -91,7 +91,7 @@ func run(log *slog.Logger, opt options) error {
 		b.attrs = attrs
 		log.Info("attribute table loaded", "rows", len(attrs), "path", opt.attrPath)
 	} else {
-		log.Warn("no attribute table; run parattr", "path", opt.attrPath)
+		log.Warn("no attribute table; run pavattr", "path", opt.attrPath)
 	}
 	log.Info("people register loaded", "rows", b.q.Entity.RegisterRows)
 

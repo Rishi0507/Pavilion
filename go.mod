@@ -1,4 +1,4 @@
-module manhattan
+module pavilion
 
 go 1.27.0
 

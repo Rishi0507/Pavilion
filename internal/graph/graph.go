@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"sort"
 
-	"manhattan/internal/corpus"
+	"pavilion/internal/corpus"
 )
 
 // Edge is one batter-versus-bowler matchup, aggregated over every delivery

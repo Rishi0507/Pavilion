@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"manhattan/internal/corpus"
+	"pavilion/internal/corpus"
 )
 
 // synthDelivery is a compact way to spell a delivery in the tests below.

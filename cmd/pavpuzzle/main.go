@@ -1,4 +1,4 @@
-// Command parpuzzle generates and validates the daily puzzle queue.
+// Command pavpuzzle generates and validates the daily puzzle queue.
 //
 // It is a batch job. It searches over targets and attack compositions, Monte
 // Carlos each candidate against a reference policy, and writes only the ones
@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"manhattan/internal/engine"
-	"manhattan/internal/puzzle"
-	"manhattan/internal/sim"
+	"pavilion/internal/engine"
+	"pavilion/internal/puzzle"
+	"pavilion/internal/sim"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-/* Par.
+/* Pavilion.
  *
  * The reference is not the scorebook page but the mechanical scoreboard at the
  * ground: weathered dark board, tin-plate numerals hung by hand. Same cricket
@@ -1669,3 +1669,82 @@ button:focus-visible, a:focus-visible {
 .claim-note { margin: var(--s2) 0 0; font-size: 12px; color: var(--dim); }
 .claim.done { border-color: var(--rule); }
 .claim.done .claim-note { color: var(--gain); }
+
+/* The batting order -------------------------------------------------------
+ *
+ * All eleven. The crease panel shows the partnership, which is what is
+ * happening; this shows what is left, which is what the next decision turns on.
+ */
+.squad { margin-top: var(--s4); }
+
+.squad-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 var(--s2);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+.squad-sub { letter-spacing: 0.04em; color: var(--dim); }
+
+.order { margin: 0; padding: 0; list-style: none; }
+
+.bat-row {
+  display: grid;
+  grid-template-columns: 2ch 1fr auto;
+  gap: var(--s2);
+  align-items: baseline;
+  padding: 5px 0 5px 7px;
+  border-bottom: 1px solid var(--rule);
+  border-left: 3px solid transparent;
+  font-size: 13px;
+}
+
+.bat-pos { font-size: 10px; color: var(--faint); }
+.bat-who-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bat-figs-small { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* At the crease: the club tint on the edge and the name in full ink. */
+.bat-row.in {
+  border-left-color: color-mix(in srgb, var(--tint, transparent) 70%, var(--ink));
+  background: var(--panel);
+}
+.bat-row.in .bat-who-name { font-weight: 600; }
+
+/* Out: struck through, the way a scorer crosses a name off. */
+.bat-row.out .bat-who-name { color: var(--faint); text-decoration: line-through; }
+.bat-row.out .bat-figs-small { color: var(--faint); }
+
+/* Yet to bat: present but plainly not involved yet. */
+.bat-row.yet .bat-who-name { color: var(--dim); }
+
+/* The phone --------------------------------------------------------------
+ *
+ * In one column the board is above the choices, so picking a bowler put the
+ * score off the top of the screen and every over cost a scroll up and a scroll
+ * back. The scoreboard pins itself to the top instead: it is the one thing that
+ * has to be readable at the moment of the decision, and it is small enough to
+ * give up forty pixels for.
+ */
+@media (max-width: 939px) {
+  .play-side .scoreboard {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-top: var(--s2);
+    padding: var(--s3) var(--s3) var(--s2);
+    /* Opaque, because the page scrolls underneath it. */
+    background: var(--panel2);
+    box-shadow: 0 6px 18px -12px #000;
+  }
+
+  .play-side .sb-main { font-size: 44px; }
+  .play-side .sb-meter { margin-top: var(--s2); }
+
+  /* The banner is a label, not information, so it scrolls away and leaves the
+   * sticky height to the numbers. */
+  .phase-banner { margin-top: var(--s2); }
+}

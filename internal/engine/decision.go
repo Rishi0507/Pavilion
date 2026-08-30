@@ -1,9 +1,9 @@
 package engine
 
 import (
-	"manhattan/internal/corpus"
-	"manhattan/internal/model"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/model"
+	"pavilion/internal/sim"
 )
 
 // Scoring the decision rather than the result.

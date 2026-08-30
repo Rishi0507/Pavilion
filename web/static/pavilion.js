@@ -1,4 +1,4 @@
-/* Par.
+/* Pavilion.
  *
  * The client draws the game and nothing else. It sends a decision, receives the
  * resolved over, and animates it. It holds no state the server does not, and it
@@ -110,7 +110,7 @@ const log = { defend: [], chase: [] };
 
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
-  if (state.token) headers['X-Par-Token'] = state.token;
+  if (state.token) headers['X-Pavilion-Token'] = state.token;
 
   const res = await fetch(path, {
     method,
@@ -775,6 +775,55 @@ function totalOf(entries) {
   return `${runs}/${wkts} in ${entries.length}`;
 }
 
+/* The batting order --------------------------------------------------------
+ *
+ * All eleven, with the two at the crease marked, the dismissed struck through
+ * and the rest waiting. The crease panel shows the partnership, which is what
+ * is happening now; this shows what is left, which is what the next decision
+ * turns on. Chasing forty off three overs with two recognised batters padded up
+ * is a different problem from chasing it with the tail, and the game had no way
+ * to say so.
+ */
+function renderSquad(s, chasing) {
+  const list = el('order');
+  const card = el('squad');
+  const order = s.batting || [];
+
+  if (!order.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+
+  el('squad-title').textContent = chasing ? 'YOUR BATTING' : 'THEIR BATTING';
+  const outCount = order.filter((b) => b.status === 'out').length;
+  el('squad-sub').textContent = `${outCount} down`;
+
+  list.replaceChildren();
+  order.forEach((b, i) => {
+    const li = document.createElement('li');
+    li.className = `bat-row ${b.status}`;
+    if (b.colour) li.style.setProperty('--tint', b.colour);
+
+    const pos = document.createElement('span');
+    pos.className = 'bat-pos';
+    pos.textContent = i + 1;
+
+    const name = document.createElement('span');
+    name.className = 'bat-who-name';
+    name.textContent = b.name;
+
+    const figs = document.createElement('span');
+    figs.className = 'bat-figs-small';
+    // Somebody yet to bat has no figures, and printing "0 (0)" for them would
+    // read as a duck rather than as a player still in the hutch.
+    figs.textContent = b.status === 'yet' ? '' : `${b.runs} (${b.balls})`;
+
+    li.append(pos, name, figs);
+    list.append(li);
+  });
+}
+
 /* The bowling card ---------------------------------------------------------
  *
  * Overs, runs, wickets and economy for each of the five, which is what a scorer
@@ -918,6 +967,7 @@ function render(s) {
   el('sb-meter-fill').style.width = `${wp}%`;
 
   paintCharts(s, chasing);
+  renderSquad(s, chasing);
   renderBowlingCard();
 
   el('controls-defend').hidden = chasing;
@@ -1092,7 +1142,7 @@ async function handover() {
 
 async function finish() {
   try {
-    const player = localStorage.getItem('par.player') || '';
+    const player = localStorage.getItem('pavilion.player') || '';
     const r = await api('POST', `/api/v1/run/${state.runID}/finish`, {
       decisions: state.decisions,
       player,
@@ -1192,7 +1242,7 @@ function offerTheBoard(r) {
 
   const note = el('claim-note');
   const input = el('claim-name');
-  const saved = localStorage.getItem('par.player') || '';
+  const saved = localStorage.getItem('pavilion.player') || '';
 
   input.value = saved;
   note.textContent = '';
@@ -1204,7 +1254,7 @@ function offerTheBoard(r) {
     if (!name) return;
     try {
       const out = await api('POST', `/api/v1/run/${state.runID}/name`, { player: name });
-      localStorage.setItem('par.player', out.player);
+      localStorage.setItem('pavilion.player', out.player);
       form.classList.add('done');
       note.textContent = `On the board as ${out.player}.`;
       el('btn-claim').textContent = 'Saved';

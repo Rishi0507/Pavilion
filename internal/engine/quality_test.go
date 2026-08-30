@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/sim"
 )
 
 // TestApplyQualityHitsItsTarget checks the Newton solve against a slow but

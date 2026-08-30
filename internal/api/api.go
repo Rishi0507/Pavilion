@@ -17,12 +17,12 @@ import (
 	"strings"
 	"time"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/engine"
-	"manhattan/internal/puzzle"
-	"manhattan/internal/session"
-	"manhattan/internal/sim"
-	"manhattan/internal/store"
+	"pavilion/internal/corpus"
+	"pavilion/internal/engine"
+	"pavilion/internal/puzzle"
+	"pavilion/internal/session"
+	"pavilion/internal/sim"
+	"pavilion/internal/store"
 )
 
 // Server holds everything a request needs.
@@ -313,6 +313,58 @@ type StateView struct {
 	Decisions        int      `json:"decisions"`
 	DefendGrid       []string `json:"defend_grid"`
 	ChaseGrid        []string `json:"chase_grid"`
+
+	// The full batting order, so the page can show a scorecard rather than only
+	// the two players at the crease. A side is eleven people, and who is still
+	// to come is part of the decision: chasing with Dhoni padded up is a
+	// different proposition from chasing with the tail.
+	Batting []BatterView `json:"batting"`
+}
+
+// BatterView is one place in the batting order.
+type BatterView struct {
+	Name   string `json:"name"`
+	Team   string `json:"team"`
+	Colour string `json:"colour"`
+	Mark   string `json:"mark"`
+	Runs   int    `json:"runs"`
+	Balls  int    `json:"balls"`
+
+	// Status is "in", "out" or "yet", which is the whole of what a scorecard
+	// says about somebody who is not currently batting.
+	Status string `json:"status"`
+}
+
+// battingCard reads the order out of the simulator's state.
+//
+// A batter has come in once the innings has reached their position, and the two
+// at the crease are known directly, so anyone who has come in and is not at the
+// crease is out. That is the whole rule, and it keeps the card in step with the
+// simulation rather than tracking dismissals a second time beside it.
+func battingCard(st *sim.State) []BatterView {
+	out := make([]BatterView, 0, len(st.Puzzle.Batting))
+	for i, b := range st.Puzzle.Batting {
+		status := "yet"
+		switch {
+		case i == st.Striker || i == st.NonStriker:
+			status = "in"
+			if st.Done {
+				status = "out"
+			}
+		case i < st.NextBatter:
+			status = "out"
+		}
+		out = append(out, BatterView{
+			Name:   b.Name,
+			Team:   b.Team,
+			Colour: engine.TeamColourShort(b.Team),
+			Mark:   engine.Monogram(b.Name),
+			Runs:   int(st.RunsScored[i]),
+			Balls:  int(st.BallsFaced[i]),
+			Status: status,
+		})
+	}
+	return out
 }
 
 func (s *Server) stateOf(run *session.Run) StateView {
@@ -354,6 +406,8 @@ func (s *Server) stateOf(run *session.Run) StateView {
 		v.NonStrikerBalls = int(st.BallsFaced[st.NonStriker])
 		v.NonStrikerRuns = int(st.RunsScored[st.NonStriker])
 	}
+	v.Batting = battingCard(st)
+
 	v.OversBowled = make([]int, 0, len(st.OversBowled))
 	for _, n := range st.OversBowled {
 		v.OversBowled = append(v.OversBowled, int(n))
@@ -561,7 +615,7 @@ func bearer(r *http.Request) string {
 	if after, ok := strings.CutPrefix(h, "Bearer "); ok {
 		return after
 	}
-	return r.Header.Get("X-Par-Token")
+	return r.Header.Get("X-Pavilion-Token")
 }
 
 // FinishResponse is the share card.

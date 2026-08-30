@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"sort"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/rates"
-	"manhattan/internal/sim"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/rates"
+	"pavilion/internal/sim"
 )
 
 // Puzzle construction.

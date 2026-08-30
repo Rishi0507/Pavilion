@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
 )
 
 // This package imports corpus, attr and features for their type vocabulary

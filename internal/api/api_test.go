@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"manhattan/internal/engine"
-	"manhattan/internal/session"
-	"manhattan/internal/sim"
-	"manhattan/internal/store"
+	"pavilion/internal/engine"
+	"pavilion/internal/session"
+	"pavilion/internal/sim"
+	"pavilion/internal/store"
 )
 
 // harness builds a server against the real engine, because the parts worth
@@ -81,7 +81,7 @@ func do(t *testing.T, ts *httptest.Server, method, path, token string, body any,
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
-		req.Header.Set("X-Par-Token", token)
+		req.Header.Set("X-Pavilion-Token", token)
 	}
 	res, err := ts.Client().Do(req)
 	if err != nil {
@@ -382,7 +382,7 @@ func TestShareText(t *testing.T) {
 	r.Day.ChaseRate = 0.31
 
 	out := ShareText(r)
-	for _, want := range []string{"Par 2026-08-29", "target 202", "won by 12", "lost by 4",
+	for _, want := range []string{"Pavilion 2026-08-29", "target 202", "won by 12", "lost by 4",
 		"68% defended", "31% chased", "streak 3"} {
 		if !bytes.Contains([]byte(out), []byte(want)) {
 			t.Errorf("share text is missing %q:\n%s", want, out)

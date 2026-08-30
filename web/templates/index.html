@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>Par · a daily cricket puzzle</title>
+<title>Pavilion · a daily cricket puzzle</title>
 <meta name="description" content="One target. Two innings. Three minutes.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/par.css">
+<link rel="stylesheet" href="/static/pavilion.css">
 </head>
 <body>
 
 <header class="masthead">
-  <h1 class="wordmark">PAR</h1>
+  <h1 class="wordmark">PAVILION</h1>
   <p class="tagline">One target. Two innings.</p>
   <p class="dateline" id="dateline">—</p>
 </header>
@@ -28,7 +28,7 @@
       <div class="hero-art" data-ground-host aria-hidden="true"></div>
 
       <div class="hero-body">
-        <h1 class="hero-mark">PAR</h1>
+        <h1 class="hero-mark">PAVILION</h1>
         <p class="hero-line">One target. Two innings. Three minutes.</p>
 
         <div class="hero-today">
@@ -269,6 +269,13 @@
       </p>
     </div>
 
+    <!-- The batting order, all eleven. Who is still to come is part of the
+         decision, and the crease alone never showed it. -->
+    <div class="squad" id="squad">
+      <h3 class="squad-head"><span id="squad-title">BATTING</span><span class="squad-sub" id="squad-sub"></span></h3>
+      <ol class="order" id="order"></ol>
+    </div>
+
     <!-- The bowling card, which is the thing a scorer would actually keep. -->
     <table class="bowling" id="bowling-card" hidden>
       <caption>BOWLING</caption>
@@ -413,6 +420,6 @@
   </p>
 </footer>
 
-<script src="/static/par.js" defer></script>
+<script src="/static/pavilion.js" defer></script>
 </body>
 </html>

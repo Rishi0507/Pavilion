@@ -1,4 +1,4 @@
-// Command parsrv serves the game.
+// Command pavsrv serves the game.
 //
 // Everything expensive happens once, at boot: the corpus is read, the rates are
 // fitted, the matchup graph is built and both models are loaded. After that the
@@ -23,24 +23,32 @@ import (
 	"syscall"
 	"time"
 
-	"manhattan/internal/api"
-	"manhattan/internal/engine"
-	"manhattan/internal/puzzle"
-	"manhattan/internal/session"
-	"manhattan/internal/store"
-	"manhattan/web"
+	"pavilion/internal/api"
+	"pavilion/internal/engine"
+	"pavilion/internal/puzzle"
+	"pavilion/internal/session"
+	"pavilion/internal/store"
+	"pavilion/web"
 )
 
 func main() {
 	var (
 		addr     = flag.String("addr", "127.0.0.1:8080", "listen address")
-		dbPath   = flag.String("db", filepath.Join("data", "out", "par.db"), "results database")
+		dbPath   = flag.String("db", filepath.Join("data", "out", "pavilion.db"), "results database")
 		queue    = flag.String("queue", filepath.Join("data", "out", "puzzles.json"), "approved puzzle queue")
-		secret   = flag.String("secret", "", "master secret; defaults to $PAR_SECRET")
+		secret   = flag.String("secret", "", "master secret; defaults to $PAVILION_SECRET")
 		devSlow  = flag.Bool("dev", false, "serve assets from disk instead of the binary")
 		poolPath = flag.String("pool", filepath.Join("data", "out", "pool.json"), "validated practice situations")
 	)
 	flag.Parse()
+
+	// The address may also come from the environment, which is how it is set
+	// wherever the process is not started by hand.
+	if *addr == "127.0.0.1:8080" {
+		if env := os.Getenv("PAVILION_ADDR"); env != "" {
+			*addr = env
+		}
+	}
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	if err := run(log, *addr, *dbPath, *queue, *poolPath, *secret, *devSlow); err != nil {
@@ -52,14 +60,14 @@ func main() {
 func run(log *slog.Logger, addr, dbPath, queuePath, poolPath, secretFlag string, dev bool) error {
 	secret := secretFlag
 	if secret == "" {
-		secret = os.Getenv("PAR_SECRET")
+		secret = os.Getenv("PAVILION_SECRET")
 	}
 	if secret == "" {
 		// A development default, and it says so. The daily key must not be
 		// guessable in production: with it, every ball of the day could be
 		// computed before a single decision was made.
-		secret = "manhattan-development-secret"
-		log.Warn("using the development secret; set PAR_SECRET before this is public")
+		secret = "pavilion-development-secret"
+		log.Warn("using the development secret; set PAVILION_SECRET before this is public")
 	}
 
 	started := time.Now()
@@ -96,7 +104,7 @@ func run(log *slog.Logger, addr, dbPath, queuePath, poolPath, secretFlag string,
 		log.Info("practice pool loaded", "path", poolPath, "situations", pool.Len())
 	} else {
 		log.Warn("no practice pool; practice mode will be unavailable",
-			"path", poolPath, "run", "parpuzzle -pool 20")
+			"path", poolPath, "run", "pavpuzzle -pool 20")
 	}
 
 	assets, err := webAssets(dev)
@@ -202,7 +210,7 @@ func webAssets(dev bool) (http.Handler, error) {
 // is a changed URL, which the browser has no cached answer for, and an
 // unchanged file keeps its long cache.
 func stamp(root fs.FS, page []byte) []byte {
-	for _, name := range []string{"par.css", "par.js"} {
+	for _, name := range []string{"pavilion.css", "pavilion.js"} {
 		b, err := fs.ReadFile(root, "static/"+name)
 		if err != nil {
 			continue

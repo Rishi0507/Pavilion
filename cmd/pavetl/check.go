@@ -69,7 +69,7 @@ func WriteBaseline(q *Quality, path string) error {
 func CheckAgainst(q *Quality, path string) error {
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("no baseline at %s; create one with paretl -write-baseline", path)
+		return fmt.Errorf("no baseline at %s; create one with pavetl -write-baseline", path)
 	}
 	if err != nil {
 		return fmt.Errorf("read baseline %s: %w", path, err)

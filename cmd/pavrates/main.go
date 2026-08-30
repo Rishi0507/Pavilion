@@ -1,4 +1,4 @@
-// Command parrates fits the hierarchical rate table and prints the leaderboards
+// Command pavrates fits the hierarchical rate table and prints the leaderboards
 // that tell you whether the shrinkage is doing its job.
 //
 // The check the brief asks for is simple and unforgiving: sort bowlers by
@@ -16,9 +16,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/rates"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/rates"
 )
 
 func main() {
@@ -49,7 +49,7 @@ func run(log *slog.Logger, corpusPath, attrPath, outPath, reportPath string, min
 		return err
 	}
 	if len(attrs) == 0 {
-		return fmt.Errorf("no attribute table at %s; run parattr first", attrPath)
+		return fmt.Errorf("no attribute table at %s; run pavattr first", attrPath)
 	}
 
 	started := time.Now()

@@ -7,7 +7,7 @@ import (
 	"os"
 	"sort"
 
-	"manhattan/internal/corpus"
+	"pavilion/internal/corpus"
 )
 
 // Inference of bowling type from delivery signatures, for players the sources

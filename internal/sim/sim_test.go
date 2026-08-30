@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
 )
 
 // fixedPredictor returns the same distribution for every situation, so tests

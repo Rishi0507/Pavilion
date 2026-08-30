@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"manhattan/internal/sim"
+	"pavilion/internal/sim"
 )
 
 // Half is which innings of the day a run is in.

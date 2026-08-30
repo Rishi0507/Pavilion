@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strconv"
 
-	"manhattan/internal/corpus"
+	"pavilion/internal/corpus"
 )
 
 // Win probability training data.

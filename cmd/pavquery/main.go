@@ -1,10 +1,10 @@
-// Command parquery answers questions of the corpus from the command line.
+// Command pavquery answers questions of the corpus from the command line.
 //
 // It exists to prove the milestone 2 claim: that the in-memory store and the
 // matchup graph answer a real question fast enough that no database is
 // warranted. The canonical example is
 //
-//	parquery dist -bowler "JJ Bumrah" -phase death -vs-hand LHB
+//	pavquery dist -bowler "JJ Bumrah" -phase death -vs-hand LHB
 //
 // which aggregates every ball Bumrah has bowled to a left-hander in the last
 // five overs and prints the outcome distribution.
@@ -20,9 +20,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/graph"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/graph"
 )
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 		vsHand: *vsHand, vsClass: *vsClass, seasons: *seasons, limit: *limit,
 	}
 	if err := q.load(*corpusPath, *attrPath); err != nil {
-		fmt.Fprintln(os.Stderr, "parquery:", err)
+		fmt.Fprintln(os.Stderr, "pavquery:", err)
 		os.Exit(1)
 	}
 
@@ -73,18 +73,18 @@ func main() {
 		usage()
 		return
 	default:
-		fmt.Fprintf(os.Stderr, "parquery: unknown command %q\n\n", cmd)
+		fmt.Fprintf(os.Stderr, "pavquery: unknown command %q\n\n", cmd)
 		usage()
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parquery:", err)
+		fmt.Fprintln(os.Stderr, "pavquery:", err)
 		os.Exit(1)
 	}
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `parquery answers questions of the Manhattan corpus.
+	fmt.Fprint(os.Stderr, `pavquery answers questions of the Manhattan corpus.
 
 Commands:
   dist      outcome distribution for a filtered set of deliveries
@@ -93,11 +93,11 @@ Commands:
   graph     size and shape of the matchup graph
 
 Examples:
-  parquery dist -bowler "JJ Bumrah" -phase death -vs-hand LHB
-  parquery dist -bowler "R Ashwin" -vs-hand LHB -seasons 2020-2026
-  parquery matchup -batter "V Kohli" -bowler "JJ Bumrah"
-  parquery worst -batter "N Pooran" -limit 10
-  parquery graph
+  pavquery dist -bowler "JJ Bumrah" -phase death -vs-hand LHB
+  pavquery dist -bowler "R Ashwin" -vs-hand LHB -seasons 2020-2026
+  pavquery matchup -batter "V Kohli" -bowler "JJ Bumrah"
+  pavquery worst -batter "N Pooran" -limit 10
+  pavquery graph
 
 Flags:
 `)

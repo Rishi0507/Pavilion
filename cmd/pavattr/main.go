@@ -1,4 +1,4 @@
-// Command parattr resolves the two player attributes that Cricsheet does not
+// Command pavattr resolves the two player attributes that Cricsheet does not
 // carry, batting handedness and bowling type, for the players the game can
 // actually deal.
 //
@@ -29,8 +29,8 @@ import (
 	"sort"
 	"time"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
 )
 
 const userAgent = "Manhattan/0.1 (IPL daily puzzle, non-commercial prototype; rishipopawala@gmail.com)"

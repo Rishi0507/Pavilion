@@ -13,7 +13,7 @@ import (
 // are one thing rather than three.
 func ShareText(r FinishResponse) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "Par %s · target %d\n", r.Date, r.Target)
+	fmt.Fprintf(&b, "Pavilion %s · target %d\n", r.Date, r.Target)
 
 	fmt.Fprintf(&b, "Defend  %s  ", emoji(r.DefendGrid))
 	if r.Defended {

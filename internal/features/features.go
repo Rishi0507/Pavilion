@@ -16,10 +16,10 @@
 package features
 
 import (
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/graph"
-	"manhattan/internal/rates"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/graph"
+	"pavilion/internal/rates"
 )
 
 // Names lists the features in the order Extract writes them. The model artifact

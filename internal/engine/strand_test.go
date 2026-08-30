@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"manhattan/internal/sim"
+	"pavilion/internal/sim"
 )
 
 // TestNeverStrandedWithRealModel plays many innings against the real outcome

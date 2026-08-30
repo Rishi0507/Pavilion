@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/engine"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/engine"
+	"pavilion/internal/sim"
 )
 
 // The chase half.

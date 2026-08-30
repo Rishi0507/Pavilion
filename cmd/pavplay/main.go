@@ -1,4 +1,4 @@
-// Command parplay is the game, played at a terminal.
+// Command pavplay is the game, played at a terminal.
 //
 // It is deliberately ugly. The point of this stage is to find out whether
 // choosing the seventeenth over is interesting, and that question is answered
@@ -16,10 +16,10 @@ import (
 	"strconv"
 	"strings"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/engine"
-	"manhattan/internal/puzzle"
-	"manhattan/internal/sim"
+	"pavilion/internal/corpus"
+	"pavilion/internal/engine"
+	"pavilion/internal/puzzle"
+	"pavilion/internal/sim"
 )
 
 // loadPuzzle prefers the approved queue, which is the only path that has been
@@ -44,7 +44,7 @@ func loadPuzzle(e *engine.Engine, queuePath, date string, key sim.DailyKey, targ
 		}
 		target = 190
 		fmt.Fprintf(os.Stderr,
-			"parplay: no queued puzzle for %s, generating an unvalidated one at %d\n", date, target)
+			"pavplay: no queued puzzle for %s, generating an unvalidated one at %d\n", date, target)
 	}
 	return e.BuildPuzzle(date, key, target)
 }
@@ -63,17 +63,17 @@ func main() {
 
 	e, err := engine.New(engine.DefaultPaths())
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parplay:", err)
+		fmt.Fprintln(os.Stderr, "pavplay:", err)
 		os.Exit(1)
 	}
 	key, err := sim.DeriveDailyKey([]byte(*secret), *date)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parplay:", err)
+		fmt.Fprintln(os.Stderr, "pavplay:", err)
 		os.Exit(1)
 	}
 	pz, err := loadPuzzle(e, *queue, *date, key, uint16(*target))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parplay:", err)
+		fmt.Fprintln(os.Stderr, "pavplay:", err)
 		os.Exit(1)
 	}
 	puzzle := pz
@@ -90,12 +90,12 @@ func main() {
 
 	defend, err := playDefend(e, puzzle, key, in)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parplay:", err)
+		fmt.Fprintln(os.Stderr, "pavplay:", err)
 		os.Exit(1)
 	}
 	chaseRun, err := playChase(e, puzzle, key, in)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "parplay:", err)
+		fmt.Fprintln(os.Stderr, "pavplay:", err)
 		os.Exit(1)
 	}
 	fmt.Print(shareCard(puzzle, defend, chaseRun))
@@ -229,7 +229,7 @@ func plural(n int) string {
 func shareCard(p *sim.Puzzle, defend, chase run) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "\n── result ──\n\n")
-	fmt.Fprintf(&b, "Par %s · target %d\n", p.Date, p.Target)
+	fmt.Fprintf(&b, "Pavilion %s · target %d\n", p.Date, p.Target)
 
 	fmt.Fprintf(&b, "Defend  %s  ", defend.grid())
 	if defend.result.Defended {

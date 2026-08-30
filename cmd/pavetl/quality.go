@@ -185,7 +185,7 @@ func (q *Quality) WriteMarkdown(path string) error {
 	p("## Player attributes")
 	p("")
 	p("Cricsheet carries neither batting handedness nor bowling type. Both are")
-	p("sourced separately by `parattr` into a checked-in table with per-row")
+	p("sourced separately by `pavattr` into a checked-in table with per-row")
 	p("provenance. Coverage below is measured against the players the game can")
 	p("actually deal, not the whole corpus.")
 	p("")

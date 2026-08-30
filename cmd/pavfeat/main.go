@@ -1,4 +1,4 @@
-// Command parfeat exports the training matrix for the ball outcome model.
+// Command pavfeat exports the training matrix for the ball outcome model.
 //
 // Features are computed by internal/features, the same code the server will
 // call, so the training data cannot drift from what production sees. Everything
@@ -17,9 +17,9 @@ import (
 	"strconv"
 	"time"
 
-	"manhattan/internal/attr"
-	"manhattan/internal/corpus"
-	"manhattan/internal/features"
+	"pavilion/internal/attr"
+	"pavilion/internal/corpus"
+	"pavilion/internal/features"
 )
 
 func main() {
@@ -48,7 +48,7 @@ func run(log *slog.Logger, corpusPath, attrPath, outDir string, holdout int) err
 		return err
 	}
 	if len(attrs) == 0 {
-		return fmt.Errorf("no attribute table at %s; run parattr first", attrPath)
+		return fmt.Errorf("no attribute table at %s; run pavattr first", attrPath)
 	}
 
 	// The cutoff is the last season the model may learn from.

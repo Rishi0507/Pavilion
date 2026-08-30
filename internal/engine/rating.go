@@ -4,8 +4,8 @@ import (
 	"math"
 	"sort"
 
-	"manhattan/internal/corpus"
-	"manhattan/internal/rates"
+	"pavilion/internal/corpus"
+	"pavilion/internal/rates"
 )
 
 // Player ratings and what they cost to pick.

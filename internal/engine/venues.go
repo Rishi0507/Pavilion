@@ -4,7 +4,7 @@ import (
 	"hash/fnv"
 	"strings"
 
-	"manhattan/internal/corpus"
+	"pavilion/internal/corpus"
 )
 
 // Ground descriptions.

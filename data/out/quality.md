@@ -34,7 +34,7 @@ Source licence: Ball-by-ball data: Cricsheet (cricsheet.org), by Stephen Rushe, 
 ## Player attributes
 
 Cricsheet carries neither batting handedness nor bowling type. Both are
-sourced separately by `parattr` into a checked-in table with per-row
+sourced separately by `pavattr` into a checked-in table with per-row
 provenance. Coverage below is measured against the players the game can
 actually deal, not the whole corpus.
 
